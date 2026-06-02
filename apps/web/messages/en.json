@@ -1,0 +1,20 @@
+{
+  "home": {
+    "title": "RosterGG",
+    "subtitle": "Find your duo, join a team, improve.",
+    "cta": "Get started"
+  },
+  "nav": {
+    "duo": "Duo",
+    "teams": "Teams",
+    "inbox": "Inbox",
+    "training": "Training"
+  },
+  "common": {
+    "loading": "Loading…",
+    "error": "Something went wrong.",
+    "save": "Save",
+    "cancel": "Cancel",
+    "back": "Back"
+  }
+}

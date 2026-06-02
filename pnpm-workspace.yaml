@@ -1,0 +1,8 @@
+packages:
+  - 'apps/*'
+  - 'packages/*'
+allowBuilds:
+  '@sentry/cli': true
+  core-js: true
+  protobufjs: true
+  unrs-resolver: true

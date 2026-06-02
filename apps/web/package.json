@@ -1,0 +1,38 @@
+{
+  "name": "@rostergg/web",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "next": "14.2.29",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "@supabase/ssr": "^0.5.2",
+    "@supabase/supabase-js": "^2.47.0",
+    "@tanstack/react-query": "^5.62.0",
+    "zustand": "^5.0.0",
+    "next-intl": "^3.25.0",
+    "@sentry/nextjs": "^8.42.0",
+    "posthog-js": "^1.194.0",
+    "@rostergg/core": "workspace:*",
+    "@rostergg/i18n": "workspace:*"
+  },
+  "devDependencies": {
+    "@rostergg/config": "workspace:*",
+    "@types/node": "^22.0.0",
+    "@types/react": "^18.3.0",
+    "@types/react-dom": "^18.3.0",
+    "tailwindcss": "^3.4.0",
+    "autoprefixer": "^10.4.0",
+    "postcss": "^8.4.0",
+    "typescript": "^5.7.0",
+    "eslint": "^8.57.0",
+    "eslint-config-next": "14.2.29"
+  }
+}

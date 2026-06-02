@@ -1,0 +1,10 @@
+{
+  "name": "@rostergg/config",
+  "version": "0.1.0",
+  "private": true,
+  "exports": {
+    "./typescript/base": "./typescript/base.json",
+    "./typescript/nextjs": "./typescript/nextjs.json",
+    "./eslint/next": "./eslint/next.js"
+  }
+}
