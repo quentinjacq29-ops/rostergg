@@ -18,7 +18,6 @@
     "@tanstack/react-query": "^5.62.0",
     "zustand": "^5.0.0",
     "next-intl": "^3.25.0",
-    "@sentry/nextjs": "^8.42.0",
     "posthog-js": "^1.194.0",
     "@rostergg/core": "workspace:*",
     "@rostergg/i18n": "workspace:*"

@@ -1,20 +1,26 @@
 {
-  "home": {
-    "title": "RosterGG",
-    "subtitle": "Trouve ton duo, rejoins une équipe, progresse.",
-    "cta": "Commencer"
+  "home": { "title": "RosterGG", "subtitle": "Trouve ton duo, rejoins une équipe, progresse.", "cta": "Commencer" },
+  "nav": { "duo": "Duo", "teams": "Équipes", "inbox": "Messages", "training": "Training" },
+  "common": { "loading": "Chargement…", "error": "Une erreur est survenue.", "save": "Enregistrer", "cancel": "Annuler", "back": "Retour" },
+  "auth": {
+    "login": {
+      "title": "Connexion", "subtitle": "Reçois un lien magique par email.",
+      "emailLabel": "Adresse email", "emailPlaceholder": "ton@email.com",
+      "submit": "Envoyer le lien", "sent": "Lien envoyé à {email} — vérifie ta boîte mail.",
+      "noAccount": "Pas encore de compte ?", "signupLink": "S'inscrire"
+    },
+    "signup": {
+      "title": "Créer un compte", "subtitle": "Reçois un lien magique pour créer ton compte.",
+      "submit": "Créer mon compte", "hasAccount": "Déjà un compte ?", "loginLink": "Se connecter"
+    }
   },
-  "nav": {
-    "duo": "Duo",
-    "teams": "Équipes",
-    "inbox": "Messages",
-    "training": "Training"
-  },
-  "common": {
-    "loading": "Chargement…",
-    "error": "Une erreur est survenue.",
-    "save": "Enregistrer",
-    "cancel": "Annuler",
-    "back": "Retour"
+  "profile": {
+    "title": "Mon profil",
+    "champPool": "Champion pool",
+    "comingSoon": "Liaison Riot & préférences — Phase 2.",
+    "riotLink": {
+      "title": "Lier ton compte Riot",
+      "subtitle": "Entre ton Riot ID pour importer ton rang et ton champion pool."
+    }
   }
 }

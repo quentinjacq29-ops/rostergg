@@ -1,0 +1,263 @@
+'use client'
+// Port exact de desktop/shell.jsx → DSidebar + DesktopShell
+// + bottom nav mobile
+import { Link } from '@/i18n/navigation'
+import { usePathname } from 'next/navigation'
+import type { ReactNode } from 'react'
+
+const T = {
+  bg: '#0a0c14', surface: '#0f121c', void: '#06070b',
+  line: 'rgba(255,255,255,0.06)', lineStrong: 'rgba(255,255,255,0.12)',
+  text: '#f4f6ff', textDim: '#9aa2bf', textMute: '#5a607a',
+  cyan: '#00e0ff', violet: '#8b5cf6', danger: '#ff3d6e',
+  queue: '#ffb547', gold: '#ffd166', live: '#00ff9d',
+  display: 'var(--font-display)', body: 'var(--font-body)', mono: 'var(--font-mono)',
+}
+
+const RANKS: Record<string, string> = {
+  iron: '#7e7a78', bronze: '#a05e2b', silver: '#a3b5c0', gold: '#c89b3c',
+  platinum: '#4bc4b0', emerald: '#3ead84', diamond: '#6fc6e7',
+  master: '#9d58c4', grandmaster: '#d84f4f', challenger: '#ebd990',
+}
+
+// Nav items — icônes SVG identiques à desktop/shell.jsx
+const NAV = [
+  {
+    id: 'duo', label: 'Duo', href: '/duo', accent: T.cyan,
+    icon: <path d="M7 12l-3 3 3 3M17 12l3 3-3 3M14 4l-4 16"/>,
+  },
+  {
+    id: 'teams', label: 'Teams', href: '/teams', accent: T.violet,
+    icon: <><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></>,
+  },
+  {
+    id: 'training', label: 'Training', href: '/training', accent: '#ff3d6e', badge: 'NEW',
+    icon: <><path d="M14.5 17.5L3 6V3h3l11.5 11.5"/><path d="M13 19l6-6M16 16l4 4M19 21l2-2"/><path d="M14.5 6.5L18 3h3v3l-3.5 3.5"/></>,
+  },
+  {
+    id: 'inbox', label: 'Inbox', href: '/inbox', accent: T.cyan, count: 0,
+    icon: <path d="M21 12a8 8 0 01-11.5 7.2L4 21l1.8-5.5A8 8 0 1121 12z"/>,
+  },
+]
+
+type ShellUser = {
+  displayName: string | null
+  gameName: string | null
+  tagLine: string | null
+  avatarUrl: string | null
+  rankKey?: string | null      // 'diamond', 'platinum'…
+  rankLabel?: string | null    // 'DIAMOND II · 78 LP'
+  rankHue?: number
+}
+
+export default function AppShell({
+  children,
+  user,
+}: {
+  children: ReactNode
+  user: ShellUser | null
+}) {
+  const pathname = usePathname()
+  const activeId = NAV.find(n => pathname.includes(n.href))?.id ?? 'duo'
+
+  const userName     = user?.gameName ?? user?.displayName ?? 'Joueur'
+  const initials     = userName.slice(0, 2).toUpperCase()
+  const rankColor    = RANKS[user?.rankKey ?? 'iron'] ?? '#9aa2bf'
+
+  return (
+    // DesktopShell : flex row, height 100vh, overflow hidden
+    <div style={{
+      width: '100%', height: '100vh', display: 'flex', overflow: 'hidden',
+      background: T.bg, color: T.text, fontFamily: T.body,
+      backgroundImage: `
+        radial-gradient(1100px 600px at 18% -10%, ${T.violet}14, transparent 55%),
+        radial-gradient(900px 520px at 105% 115%, ${T.cyan}10, transparent 55%)
+      `,
+    }}>
+
+      {/* ── DSidebar (desktop ≥860px) */}
+      <aside className="rgg-sidebar" style={{
+        display: 'none', // shown via CSS media query
+        width: 248, flexShrink: 0, height: '100%', boxSizing: 'border-box',
+        background: `linear-gradient(180deg, ${T.surface}, ${T.void})`,
+        borderRight: `1px solid ${T.line}`,
+        flexDirection: 'column', padding: '24px 16px 18px',
+      }}>
+        {/* Logo */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '4px 8px 26px' }}>
+          <div style={{
+            width: 40, height: 40, borderRadius: 11, position: 'relative', overflow: 'hidden',
+            background: `linear-gradient(150deg, ${T.surface}, ${T.void})`,
+            boxShadow: `inset 0 0 0 1px rgba(255,255,255,0.1), 0 0 20px ${T.cyan}33`,
+            display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+          }}>
+            <svg width="26" height="26" viewBox="0 0 48 48" fill="none">
+              <path d="M9 9 L20 24 L9 39" stroke={T.cyan} strokeWidth="5.2" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M39 9 L28 24 L39 39" stroke={T.violet} strokeWidth="5.2" strokeLinecap="round" strokeLinejoin="round"/>
+              <circle cx="24" cy="24" r="4.6" fill={T.cyan}/>
+            </svg>
+          </div>
+          <div style={{ lineHeight: 1 }}>
+            <div style={{ fontFamily: T.display, fontSize: 21, color: T.text, letterSpacing: '0.04em' }}>
+              ROSTER<span style={{ color: T.cyan }}>GG</span>
+            </div>
+            <div style={{ fontFamily: T.mono, fontSize: 8.5, color: T.cyan, letterSpacing: '0.24em', marginTop: 3 }}>
+              v2.4 · EUW
+            </div>
+          </div>
+        </div>
+
+        {/* MENU kicker */}
+        <div style={{ fontFamily: T.mono, fontSize: 9, color: T.textMute, letterSpacing: '0.24em', padding: '0 10px 10px' }}>
+          MENU
+        </div>
+
+        {/* Nav items */}
+        <nav style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          {NAV.map(item => {
+            const on = activeId === item.id
+            const a  = item.accent
+            return (
+              <Link key={item.id} href={item.href} style={{ textDecoration: 'none' }}>
+                <div style={{
+                  position: 'relative', width: '100%', display: 'flex', alignItems: 'center', gap: 13,
+                  padding: '12px 14px', borderRadius: 12, cursor: 'pointer',
+                  background: on ? `linear-gradient(100deg, ${a}26, ${a}0c)` : 'transparent',
+                  border: `1px solid ${on ? a + '55' : 'transparent'}`,
+                  boxShadow: on ? `inset 0 0 22px ${a}1f` : 'none',
+                  transition: 'background .15s, border-color .15s',
+                }}>
+                  {on && (
+                    <span style={{
+                      position: 'absolute', left: -1, top: 10, bottom: 10, width: 3,
+                      borderRadius: 3, background: a, boxShadow: `0 0 10px ${a}`,
+                    }}/>
+                  )}
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+                    stroke={on ? a : T.textDim} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                    style={on ? { filter: `drop-shadow(0 0 5px ${a}80)` } : {}}>
+                    {item.icon}
+                  </svg>
+                  <span style={{ flex: 1, fontFamily: T.display, fontSize: 15, letterSpacing: '0.08em', color: on ? T.text : T.textDim }}>
+                    {item.label.toUpperCase()}
+                  </span>
+                  {item.count ? (
+                    <span style={{
+                      minWidth: 19, height: 19, padding: '0 5px', borderRadius: 10,
+                      background: T.danger, color: '#fff',
+                      fontFamily: T.mono, fontSize: 10, fontWeight: 800,
+                      display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                      boxShadow: `0 0 8px ${T.danger}70`,
+                    }}>{item.count}</span>
+                  ) : null}
+                  {item.badge ? (
+                    <span style={{
+                      padding: '2px 6px', borderRadius: 6, background: a,
+                      color: '#180408', fontFamily: T.mono, fontSize: 8,
+                      fontWeight: 800, letterSpacing: '0.12em',
+                    }}>{item.badge}</span>
+                  ) : null}
+                </div>
+              </Link>
+            )
+          })}
+        </nav>
+
+        <div style={{ flex: 1 }}/>
+
+        {/* Queue widget */}
+        <div style={{
+          padding: '12px 14px', borderRadius: 12,
+          background: `linear-gradient(135deg, ${T.queue}12, transparent)`,
+          border: `1px solid ${T.queue}33`,
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+              <span className="rgg-pulse" style={{ width: 7, height: 7, borderRadius: '50%', background: T.queue, boxShadow: `0 0 8px ${T.queue}`, display: 'inline-block' }}/>
+              <span style={{ fontFamily: T.mono, fontSize: 10, color: T.queue, letterSpacing: '0.15em', fontWeight: 600 }}>IN QUEUE</span>
+            </span>
+            <span style={{ fontFamily: T.mono, fontSize: 10, color: T.queue, letterSpacing: '0.1em' }}>02:14</span>
+          </div>
+          <div style={{ marginTop: 9, height: 4, borderRadius: 4, background: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
+            <div style={{ width: '64%', height: '100%', borderRadius: 4, background: `linear-gradient(90deg, ${T.queue}, ${T.gold})`, boxShadow: `0 0 8px ${T.queue}` }}/>
+          </div>
+          <div style={{ marginTop: 8, fontFamily: T.mono, fontSize: 9, color: T.textDim, letterSpacing: '0.08em' }}>
+            RANKED SOLO/DUO · EST. 0:48
+          </div>
+        </div>
+
+        {/* User chip */}
+        <Link href="/me" style={{ textDecoration: 'none' }}>
+          <div style={{
+            marginTop: 12, display: 'flex', alignItems: 'center', gap: 11, width: '100%',
+            padding: '10px 10px', borderRadius: 12, cursor: 'pointer',
+            background: 'rgba(255,255,255,0.025)', border: `1px solid ${T.line}`,
+          }}>
+            {/* Avatar 36px */}
+            <div style={{ position: 'relative', width: 36, height: 36, flexShrink: 0 }}>
+              <div style={{
+                width: 36, height: 36, borderRadius: '50%',
+                background: `linear-gradient(135deg, oklch(0.55 0.18 230), oklch(0.30 0.14 270))`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontFamily: T.display, fontSize: 15, color: '#fff',
+                boxShadow: `0 0 0 2px ${rankColor}, 0 0 0 4px ${T.bg}, 0 0 12px ${rankColor}60`,
+              }}>{initials}</div>
+              <div style={{
+                position: 'absolute', bottom: -1, right: -1, width: 10, height: 10,
+                borderRadius: '50%', background: T.live,
+                boxShadow: `0 0 0 2px ${T.bg}, 0 0 8px ${T.live}`,
+              }}/>
+            </div>
+            <div style={{ flex: 1, minWidth: 0, lineHeight: 1.2 }}>
+              <div style={{ fontFamily: T.display, fontSize: 14, color: T.text, letterSpacing: '0.04em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {userName.toUpperCase()}
+              </div>
+              {user?.rankLabel && (
+                <div style={{ fontFamily: T.mono, fontSize: 9, color: rankColor, letterSpacing: '0.1em' }}>
+                  {user.rankLabel}
+                </div>
+              )}
+            </div>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={T.textDim} strokeWidth="2" strokeLinecap="round">
+              <path d="M6 9l6 6 6-6"/>
+            </svg>
+          </div>
+        </Link>
+      </aside>
+
+      {/* ── Main */}
+      <main className="rgg-main" style={{ flex: 1, minWidth: 0, height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        {children}
+      </main>
+
+      {/* ── Bottom nav (mobile <860px) */}
+      <nav className="rgg-bottom-nav" style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 50, display: 'none' }}>
+        <div style={{
+          display: 'flex', background: T.surface,
+          borderTop: '1px solid rgba(255,255,255,0.08)',
+          paddingBottom: 'env(safe-area-inset-bottom)',
+        }}>
+          {NAV.map(item => {
+            const on = activeId === item.id
+            return (
+              <Link key={item.id} href={item.href} style={{
+                flex: 1, display: 'flex', flexDirection: 'column',
+                alignItems: 'center', gap: 3, padding: '8px 0 6px',
+                textDecoration: 'none',
+              }}>
+                <span style={{
+                  display: 'block', width: 18, height: 3, borderRadius: 2, marginBottom: 2,
+                  background: on ? item.accent : 'transparent',
+                  transition: 'background .14s',
+                }}/>
+                <span style={{ fontFamily: T.display, fontSize: 10, color: on ? item.accent : T.textMute, letterSpacing: '0.08em' }}>
+                  {item.label.toUpperCase()}
+                </span>
+              </Link>
+            )
+          })}
+        </div>
+      </nav>
+    </div>
+  )
+}

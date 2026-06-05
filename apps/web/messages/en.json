@@ -1,20 +1,26 @@
 {
-  "home": {
-    "title": "RosterGG",
-    "subtitle": "Find your duo, join a team, improve.",
-    "cta": "Get started"
+  "home": { "title": "RosterGG", "subtitle": "Find your duo, join a team, improve.", "cta": "Get started" },
+  "nav": { "duo": "Duo", "teams": "Teams", "inbox": "Inbox", "training": "Training" },
+  "common": { "loading": "Loading…", "error": "Something went wrong.", "save": "Save", "cancel": "Cancel", "back": "Back" },
+  "auth": {
+    "login": {
+      "title": "Sign in", "subtitle": "Get a magic link sent to your email.",
+      "emailLabel": "Email address", "emailPlaceholder": "you@email.com",
+      "submit": "Send magic link", "sent": "Link sent to {email} — check your inbox.",
+      "noAccount": "Don't have an account?", "signupLink": "Sign up"
+    },
+    "signup": {
+      "title": "Create an account", "subtitle": "Get a magic link to create your account.",
+      "submit": "Create account", "hasAccount": "Already have an account?", "loginLink": "Sign in"
+    }
   },
-  "nav": {
-    "duo": "Duo",
-    "teams": "Teams",
-    "inbox": "Inbox",
-    "training": "Training"
-  },
-  "common": {
-    "loading": "Loading…",
-    "error": "Something went wrong.",
-    "save": "Save",
-    "cancel": "Cancel",
-    "back": "Back"
+  "profile": {
+    "title": "My profile",
+    "champPool": "Champion pool",
+    "comingSoon": "Riot linking & preferences — Phase 2.",
+    "riotLink": {
+      "title": "Link your Riot account",
+      "subtitle": "Enter your Riot ID to import your rank and champion pool."
+    }
   }
 }
