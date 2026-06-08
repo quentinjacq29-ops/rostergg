@@ -1,18 +1,22 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { championIconUrl } from '@/lib/riot/assets'
 import MatchRing from '@/components/ui/MatchRing'
 import RoleIcon, { ROLE_META } from '@/components/ui/RoleIcon'
 import Avatar, { RANK_COLORS } from '@/components/ui/Avatar'
 import DuoFilterPanel from '@/components/duo/DuoFilterPanel'
+import DuoRequestModal, { type DuoRequestTarget, type DuoRequestMe } from '@/components/duo/DuoRequestModal'
+import { usePresence } from '@/lib/hooks/usePresence'
 
-// ── Design tokens (miroir de tokens.jsx) ──────────────────────────────
+// ── Design tokens ─────────────────────────────────────────────────────
 const T = {
   bg: '#0a0c14', surface: '#0f121c', elevated: '#161a26',
   line: 'rgba(255,255,255,0.06)', lineStrong: 'rgba(255,255,255,0.12)',
   text: '#f4f6ff', textDim: '#9aa2bf', textMute: '#5a607a',
   cyan: '#00e0ff', violet: '#8b5cf6', live: '#00ff9d', gold: '#ffd166',
+  danger: '#ff3d6e',
   display: 'var(--font-display)', body: 'var(--font-body)', mono: 'var(--font-mono)',
 }
 
@@ -20,6 +24,8 @@ const T = {
 
 type RankRow = { tier: string; division: string | null; league_points: number; wins: number; losses: number; queue: string }
 
+// Supabase retourne riot_accounts et matching_prefs comme objets simples
+// (pas tableaux) car profile_id est unique/PK dans ces tables.
 type CandidateProfile = {
   id: string
   display_name: string | null
@@ -30,14 +36,14 @@ type CandidateProfile = {
     tag_line: string
     profile_icon_id: number | null
     ranks: RankRow[]
-  }[] | null
+  } | null
   matching_prefs: {
     main_roles: string[]
     looking_for_roles: string[]
     languages: string[]
     playstyles: string[]
     goals: string[]
-  }[] | null
+  } | null
 }
 
 type FeedRow = {
@@ -66,23 +72,30 @@ type Filters = {
   region: string | null
 }
 
+// Statut de la demande entre le user courant et le candidat sélectionné
+type RequestInfo = {
+  id: string
+  status: 'pending' | 'accepted' | 'declined' | 'expired'
+  fromMe: boolean
+  conversationId: string | null
+} | null
+
 // ── Helpers ───────────────────────────────────────────────────────────
 
 function nameHue(s: string) {
   let h = 0; for (const c of s) h = (h * 31 + c.charCodeAt(0)) % 360; return h
 }
-
 function playerName(p: CandidateProfile | null) {
-  return p?.riot_accounts?.[0]?.game_name ?? p?.display_name ?? '—'
+  return p?.riot_accounts?.game_name ?? p?.display_name ?? '—'
 }
 function playerInitials(p: CandidateProfile | null) {
   return playerName(p).slice(0, 2).toUpperCase()
 }
 function soloRank(p: CandidateProfile | null): RankRow | null {
-  return p?.riot_accounts?.[0]?.ranks?.find(r => r.queue === 'RANKED_SOLO_5x5') ?? null
+  return p?.riot_accounts?.ranks?.find(r => r.queue === 'RANKED_SOLO_5x5') ?? null
 }
 
-// ── DSynergy — port exact de la maquette desktop/duo.jsx ──────────────
+// ── DSynergy ──────────────────────────────────────────────────────────
 function DSynergy({ label, value, note, color }: {
   label: string; value: number; note: string; color: string
 }) {
@@ -104,7 +117,7 @@ function DSynergy({ label, value, note, color }: {
   )
 }
 
-// ── Pill — port exact de la maquette components.jsx ───────────────────
+// ── Pill ──────────────────────────────────────────────────────────────
 function Pill({ children, accent, mono = false, size = 'md' }: {
   children: React.ReactNode; accent?: string; mono?: boolean; size?: 'sm' | 'md'
 }) {
@@ -126,7 +139,6 @@ function Pill({ children, accent, mono = false, size = 'md' }: {
   )
 }
 
-// ── SectionLabel ──────────────────────────────────────────────────────
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
     <div style={{ fontFamily: T.mono, fontSize: 10, color: T.textMute, letterSpacing: '0.22em' }}>
@@ -135,15 +147,12 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
   )
 }
 
-// ── AvailabilityHeat — port exact de la maquette desktop/duo.jsx ──────
+// ── AvailabilityHeat ──────────────────────────────────────────────────
 function AvailabilityHeat({ slots }: {
   slots: { weekday: number; slot: number; intensity: number }[]
 }) {
   const DAYS = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN']
-  const heat = [
-    'rgba(255,255,255,0.04)',
-    `${T.cyan}26`, `${T.cyan}55`, `${T.cyan}aa`,
-  ]
+  const heat = ['rgba(255,255,255,0.04)', `${T.cyan}26`, `${T.cyan}55`, `${T.cyan}aa`]
   const grid = Array.from({ length: 7 }, (_, day) =>
     Array.from({ length: 6 }, (_, s) =>
       slots.find(a => a.weekday === day && a.slot === s)?.intensity ?? 0
@@ -176,23 +185,21 @@ function AvailabilityHeat({ slots }: {
   )
 }
 
-// ── DuoFeedRow — port exact de la maquette desktop/duo.jsx ───────────
-function DuoFeedRow({ item, selected, onClick }: {
-  item: DuoItem; selected: boolean; onClick: () => void
+// ── DuoFeedRow ────────────────────────────────────────────────────────
+function DuoFeedRow({ item, selected, online, onClick }: {
+  item: DuoItem; selected: boolean; online: boolean; onClick: () => void
 }) {
   const p = item.profile
   const name = playerName(p)
   const init = playerInitials(p)
   const hue  = nameHue(name)
   const rank = soloRank(p)
-  const rankKey = rank?.tier?.toLowerCase() ?? 'iron'
+  const rankKey   = rank?.tier?.toLowerCase() ?? 'iron'
   const rankColor = RANK_COLORS[rankKey] ?? '#9aa2bf'
-
-  const role    = item.candidate_role ?? p?.matching_prefs?.[0]?.main_roles?.[0] ?? 'FILL'
-  const looking = p?.matching_prefs?.[0]?.looking_for_roles?.[0] ?? 'FILL'
+  const role    = item.candidate_role ?? p?.matching_prefs?.main_roles?.[0] ?? 'FILL'
+  const looking = p?.matching_prefs?.looking_for_roles?.[0] ?? 'FILL'
   const roleMeta    = ROLE_META[role?.toUpperCase()]    ?? ROLE_META.FILL
   const lookingMeta = ROLE_META[looking?.toUpperCase()] ?? ROLE_META.FILL
-
   const tierLabel = rank ? `${rank.tier.slice(0,3)} ${rank.division ?? ''}`.trim() : 'UNRANKED'
   const lp        = rank?.league_points ?? 0
 
@@ -200,103 +207,137 @@ function DuoFeedRow({ item, selected, onClick }: {
     <button onClick={onClick} style={{
       position: 'relative', display: 'flex', alignItems: 'center', gap: 13, width: '100%',
       padding: '13px 14px', borderRadius: 14, cursor: 'pointer', textAlign: 'left',
-      background: selected
-        ? `linear-gradient(100deg, ${T.cyan}1c, ${T.violet}10)`
-        : 'rgba(255,255,255,0.022)',
+      background: selected ? `linear-gradient(100deg, ${T.cyan}1c, ${T.violet}10)` : 'rgba(255,255,255,0.022)',
       border: `1px solid ${selected ? T.cyan + '66' : T.line}`,
       boxShadow: selected ? `0 8px 26px -12px ${T.cyan}, inset 0 0 0 1px ${T.cyan}22` : 'none',
       transition: 'background .14s, border-color .14s',
     }}>
       {selected && (
         <span style={{
-          position: 'absolute', left: -1, top: 14, bottom: 14, width: 3,
-          borderRadius: 3,
+          position: 'absolute', left: -1, top: 14, bottom: 14, width: 3, borderRadius: 3,
           background: `linear-gradient(${T.cyan},${T.violet})`,
           boxShadow: `0 0 10px ${T.cyan}`,
         }} />
       )}
-
-      <Avatar initials={init} size={46} rank={rankKey} hue={hue} online />
-
+      <Avatar initials={init} size={46} rank={rankKey} hue={hue} online={online} />
       <div style={{ flex: 1, minWidth: 0 }}>
-        {/* Name + role → looking */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 7, lineHeight: 1 }}>
-          <span style={{ fontFamily: T.display, fontSize: 16, color: T.text, letterSpacing: '0.04em' }}>
-            {name}
-          </span>
-          {/* role badge */}
-          <span style={{
-            display: 'inline-flex', alignItems: 'center', gap: 3,
-            padding: '3px 6px', borderRadius: 6,
-            background: `${roleMeta.c}1a`, border: `1px solid ${roleMeta.c}40`,
-          }}>
+          <span style={{ fontFamily: T.display, fontSize: 16, color: T.text, letterSpacing: '0.04em' }}>{name}</span>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, padding: '3px 6px', borderRadius: 6, background: `${roleMeta.c}1a`, border: `1px solid ${roleMeta.c}40` }}>
             <RoleIcon role={role} size={11} active />
           </span>
-          {/* arrow */}
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke={T.textMute} strokeWidth="2.5" strokeLinecap="round">
             <path d="M5 12h14M13 6l6 6-6 6" />
           </svg>
-          {/* looking badge */}
-          <span style={{
-            display: 'inline-flex', alignItems: 'center', gap: 3,
-            padding: '3px 6px', borderRadius: 6,
-            background: `${lookingMeta.c}14`, border: `1px solid ${lookingMeta.c}33`,
-          }}>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, padding: '3px 6px', borderRadius: 6, background: `${lookingMeta.c}14`, border: `1px solid ${lookingMeta.c}33` }}>
             <RoleIcon role={looking} size={11} active />
           </span>
         </div>
-
-        {/* Rank pill + LP + status */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 7 }}>
           <Pill mono size="sm" accent={rankColor}>{tierLabel}</Pill>
-          <span style={{ fontFamily: T.mono, fontSize: 9.5, color: T.textDim, letterSpacing: '0.08em' }}>
-            {lp} LP
-          </span>
+          <span style={{ fontFamily: T.mono, fontSize: 9.5, color: T.textDim, letterSpacing: '0.08em' }}>{lp} LP</span>
           {item.is_degraded && (
-            <span style={{
-              fontFamily: T.mono, fontSize: 9, color: T.textMute, letterSpacing: '0.08em',
-              padding: '2px 6px', borderRadius: 4,
-              background: 'rgba(255,255,255,0.04)', border: `1px solid ${T.line}`,
-            }}>HORS RÔLE</span>
+            <span style={{ fontFamily: T.mono, fontSize: 9, color: T.textMute, letterSpacing: '0.08em', padding: '2px 6px', borderRadius: 4, background: 'rgba(255,255,255,0.04)', border: `1px solid ${T.line}` }}>HORS RÔLE</span>
           )}
         </div>
       </div>
-
       <MatchRing value={item.score} size={52} stroke={4} accent={T.cyan} accent2={T.violet} />
     </button>
   )
 }
 
-// ── DuoDetailPane — port exact de la maquette desktop/duo.jsx ─────────
-function DuoDetailPane({ item, avail, champs, onRequest }: {
+// ── PoolGroup — port exact de desktop/profile.jsx ─────────────────────
+function PoolGroup({ role, label, champIds, masteryMap }: {
+  role: string
+  label: 'PRINCIPAL' | 'SECONDAIRE'
+  champIds: string[]
+  masteryMap: Record<string, { level: number; points: number }>
+}) {
+  const rc = ROLE_META[role]?.c ?? T.cyan
+
+  function masteryLabel(id: string) {
+    const m = masteryMap[id]
+    if (!m) return '—'
+    const pts = m.points > 1000 ? ` · ${Math.round(m.points / 1000)}k` : ''
+    return `M${m.level}${pts}`
+  }
+
+  return (
+    <div style={{ borderRadius: 16, padding: 18, background: `linear-gradient(135deg, ${rc}10, transparent 72%)`, border: `1px solid ${rc}33` }}>
+      {/* Header : icône rôle + nom + badge PRINCIPAL/SECONDAIRE + compteur */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 11, marginBottom: 16 }}>
+        <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 34, height: 34, borderRadius: 10, background: `${rc}1c`, border: `1px solid ${rc}55` }}>
+          <RoleIcon role={role} size={18} active />
+        </span>
+        <span style={{ fontFamily: T.display, fontSize: 19, color: T.text, letterSpacing: '0.03em' }}>
+          {ROLE_META[role]?.name ?? role}
+        </span>
+        <span style={{ fontFamily: T.mono, fontSize: 8.5, color: rc, letterSpacing: '0.16em', padding: '3px 8px', borderRadius: 6, background: `${rc}18`, border: `1px solid ${rc}40` }}>
+          {label}
+        </span>
+        <div style={{ flex: 1 }} />
+        <span style={{ fontFamily: T.mono, fontSize: 10, color: T.textMute, letterSpacing: '0.1em' }}>
+          {champIds.length} CHAMPS
+        </span>
+      </div>
+      {/* Grille de champions */}
+      <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap' }}>
+        {champIds.map((id, i) => (
+          <div key={id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 7 }}>
+            <div style={{
+              width: 70, height: 70, borderRadius: 12, overflow: 'hidden', background: '#161a26',
+              border: `1.5px solid ${i === 0 ? rc : rc + '55'}`,
+              boxShadow: i === 0 ? `0 0 0 2px ${rc}, 0 0 14px ${rc}66` : 'none',
+            }}>
+              <img src={championIconUrl(id)} alt={id} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            </div>
+            <span style={{ fontFamily: T.mono, fontSize: 8.5, color: i === 0 ? rc : T.textMute, letterSpacing: '0.04em' }}>
+              {masteryLabel(id)}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// ── DuoDetailPane ─────────────────────────────────────────────────────
+function DuoDetailPane({ item, avail, champPool, masteryMap, online, requestInfo, onOpenRequest, onAccept, onDecline, onMessage }: {
   item: DuoItem
   avail: { weekday: number; slot: number; intensity: number }[]
-  champs: { champion_key: string; mastery_level: number }[]
-  onRequest: () => void
+  champPool: Record<string, string[]>
+  masteryMap: Record<string, { level: number; points: number }>
+  online: boolean
+  requestInfo: RequestInfo
+  onOpenRequest: () => void
+  onAccept: (requestId: string) => void
+  onDecline: (requestId: string) => void
+  onMessage: (conversationId: string) => void
 }) {
   const p = item.profile
   const name = playerName(p)
   const init = playerInitials(p)
   const hue  = nameHue(name)
-  const tag  = p?.riot_accounts?.[0]?.tag_line ? `#${p.riot_accounts[0].tag_line}` : ''
+  const tag  = p?.riot_accounts?.tag_line ? `#${p.riot_accounts.tag_line}` : ''
   const rank = soloRank(p)
   const rankKey   = rank?.tier?.toLowerCase() ?? 'iron'
   const rankColor = RANK_COLORS[rankKey] ?? '#9aa2bf'
   const rankLabel = rank ? `${rank.tier} ${rank.division ?? ''} · ${rank.league_points} LP`.trim() : 'UNRANKED'
-
-  const role    = item.candidate_role ?? p?.matching_prefs?.[0]?.main_roles?.[0] ?? 'FILL'
-  const looking = p?.matching_prefs?.[0]?.looking_for_roles?.[0] ?? 'FILL'
+  const role    = item.candidate_role ?? p?.matching_prefs?.main_roles?.[0] ?? 'FILL'
+  const looking = p?.matching_prefs?.looking_for_roles?.[0] ?? 'FILL'
   const roleMeta    = ROLE_META[role?.toUpperCase()]    ?? ROLE_META.FILL
   const lookingMeta = ROLE_META[looking?.toUpperCase()] ?? ROLE_META.FILL
-  const playstyles  = p?.matching_prefs?.[0]?.playstyles ?? []
-
-  // Role fit score : 100 si non-dégradé (a passé le filtre), 0 sinon
+  const playstyles  = p?.matching_prefs?.playstyles ?? []
   const roleFitScore = item.is_degraded ? 0 : 100
-
-  // Win rate depuis ranks (wins / (wins+losses))
   const candidateRank = soloRank(p)
   const total = (candidateRank?.wins ?? 0) + (candidateRank?.losses ?? 0)
   const wr = total > 0 ? Math.round(((candidateRank?.wins ?? 0) / total) * 100) : '—'
+
+  // ── CTA logic selon le statut de la demande
+  const ri = requestInfo
+  const isAccepted = ri?.status === 'accepted'
+  const isPendingFromMe = ri?.status === 'pending' && ri.fromMe
+  const isPendingToMe   = ri?.status === 'pending' && !ri.fromMe
 
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column', minWidth: 0 }}>
@@ -305,58 +346,37 @@ function DuoDetailPane({ item, avail, champs, onRequest }: {
 
         {/* Hero */}
         <div style={{ position: 'relative', display: 'flex', gap: 22, alignItems: 'flex-start' }}>
-          <div style={{
-            position: 'absolute', top: -28, left: -10, width: 220, height: 170,
-            background: `radial-gradient(circle, ${T.cyan}33, transparent 70%)`,
-            filter: 'blur(36px)', pointerEvents: 'none',
-          }} />
-          <Avatar initials={init} size={92} rank={rankKey} hue={hue} online />
+          <div style={{ position: 'absolute', top: -28, left: -10, width: 220, height: 170, background: `radial-gradient(circle, ${T.cyan}33, transparent 70%)`, filter: 'blur(36px)', pointerEvents: 'none' }} />
+          <Avatar initials={init} size={92} rank={rankKey} hue={hue} online={online} />
           <div style={{ flex: 1, minWidth: 0, position: 'relative' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <span style={{ fontFamily: T.display, fontSize: 34, color: T.text, letterSpacing: '0.02em', lineHeight: 1 }}>
-                {name}
-              </span>
-              {tag && (
-                <span style={{ fontFamily: T.mono, fontSize: 12, color: T.textDim, letterSpacing: '0.1em' }}>
-                  {tag}
-                </span>
-              )}
+            <a href="#" onClick={e => e.preventDefault()} title="Ouvre la fiche complète"
+              style={{ position: 'absolute', top: 0, right: 0, display: 'inline-flex', alignItems: 'center', gap: 8, padding: '11px 16px', borderRadius: 11, textDecoration: 'none', cursor: 'pointer', background: `${T.cyan}1c`, border: `1.5px solid ${T.cyan}`, color: T.cyan, boxShadow: `0 0 0 4px ${T.cyan}14`, fontFamily: T.mono, fontSize: 12, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+              Voir le profil complet
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={T.cyan} strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M7 17L17 7M9 7h8v8"/></svg>
+            </a>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, paddingRight: 230 }}>
+              <span style={{ fontFamily: T.display, fontSize: 34, color: T.text, letterSpacing: '0.02em', lineHeight: 1 }}>{name}</span>
+              {tag && <span style={{ fontFamily: T.mono, fontSize: 12, color: T.textDim, letterSpacing: '0.1em' }}>{tag}</span>}
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 12, flexWrap: 'wrap' }}>
               <Pill mono accent={rankColor}>{rankLabel}</Pill>
-              {/* role badge */}
-              <span style={{
-                display: 'inline-flex', alignItems: 'center', gap: 6,
-                padding: '6px 11px', borderRadius: 999,
-                background: `${roleMeta.c}1a`, border: `1px solid ${roleMeta.c}44`,
-              }}>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 11px', borderRadius: 999, background: `${roleMeta.c}1a`, border: `1px solid ${roleMeta.c}44` }}>
                 <RoleIcon role={role} size={14} active />
-                <span style={{ fontFamily: T.mono, fontSize: 11, color: roleMeta.c, letterSpacing: '0.1em', fontWeight: 700 }}>
-                  {roleMeta.name}
-                </span>
+                <span style={{ fontFamily: T.mono, fontSize: 11, color: roleMeta.c, letterSpacing: '0.1em', fontWeight: 700 }}>{roleMeta.name}</span>
               </span>
-              <span style={{ fontFamily: T.mono, fontSize: 11, color: T.textDim, letterSpacing: '0.06em' }}>
-                looking for
-              </span>
-              {/* looking badge */}
-              <span style={{
-                display: 'inline-flex', alignItems: 'center', gap: 6,
-                padding: '6px 11px', borderRadius: 999,
-                background: `${lookingMeta.c}14`, border: `1px solid ${lookingMeta.c}33`,
-              }}>
+              <span style={{ fontFamily: T.mono, fontSize: 11, color: T.textDim, letterSpacing: '0.06em' }}>looking for</span>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 11px', borderRadius: 999, background: `${lookingMeta.c}14`, border: `1px solid ${lookingMeta.c}33` }}>
                 <RoleIcon role={looking} size={14} active />
-                <span style={{ fontFamily: T.mono, fontSize: 11, color: lookingMeta.c, letterSpacing: '0.1em', fontWeight: 700 }}>
-                  {lookingMeta.name}
-                </span>
+                <span style={{ fontFamily: T.mono, fontSize: 11, color: lookingMeta.c, letterSpacing: '0.1em', fontWeight: 700 }}>{lookingMeta.name}</span>
               </span>
             </div>
           </div>
         </div>
 
-        {/* two-col body — port exact de desktop/duo.jsx DuoDetailPane */}
+        {/* two-col body */}
         <div style={{ marginTop: 26, display: 'grid', gridTemplateColumns: '1.05fr 1fr', gap: 18 }}>
 
-          {/* WHY YOU MATCH — gridColumn 1/-1 */}
+          {/* WHY YOU MATCH */}
           <div style={{ gridColumn: '1 / -1', borderRadius: 18, padding: 22, background: `linear-gradient(135deg, ${T.cyan}12, ${T.violet}12)`, border: `1px solid ${T.cyan}2e` }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
               <MatchRing value={item.score} size={104} stroke={6} accent={T.cyan} accent2={T.violet} />
@@ -373,16 +393,16 @@ function DuoDetailPane({ item, avail, champs, onRequest }: {
             </div>
           </div>
 
-          {/* WIN RATE — port de DStatBox */}
+          {/* WIN RATE */}
           <div style={{ padding: '14px 16px', borderRadius: 14, background: 'rgba(255,255,255,0.025)', border: `1px solid ${T.line}` }}>
             <div style={{ fontFamily: T.mono, fontSize: 9, color: T.textMute, letterSpacing: '0.2em' }}>WIN RATE</div>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 2, marginTop: 6 }}>
               <span style={{ fontFamily: T.display, fontSize: 28, color: T.live, letterSpacing: '0.01em', lineHeight: 1 }}>{wr}</span>
-              <span style={{ fontFamily: T.display, fontSize: 15, color: T.live, opacity: 0.7 }}>%</span>
+              {typeof wr === 'number' && <span style={{ fontFamily: T.display, fontSize: 15, color: T.live, opacity: 0.7 }}>%</span>}
             </div>
           </div>
 
-          {/* KDA — port de DStatBox */}
+          {/* KDA */}
           <div style={{ padding: '14px 16px', borderRadius: 14, background: 'rgba(255,255,255,0.025)', border: `1px solid ${T.line}` }}>
             <div style={{ fontFamily: T.mono, fontSize: 9, color: T.textMute, letterSpacing: '0.2em' }}>KDA</div>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 2, marginTop: 6 }}>
@@ -390,27 +410,42 @@ function DuoDetailPane({ item, avail, champs, onRequest }: {
             </div>
           </div>
 
-          {/* Champion pool — gridColumn 1/-1 */}
-          {champs.length > 0 && (
-            <div style={{ gridColumn: '1 / -1' }}>
-              <SectionLabel>CHAMPION POOL · {role}</SectionLabel>
-              <div style={{ display: 'flex', gap: 12, marginTop: 12, flexWrap: 'wrap' }}>
-                {champs.slice(0, 6).map((ch, i) => (
-                  <div key={ch.champion_key} style={{
-                    width: 66, height: 66, borderRadius: 10, overflow: 'hidden',
-                    border: `1px solid ${i === 0 ? `${T.cyan}88` : 'rgba(255,255,255,0.1)'}`,
-                    boxShadow: i === 0 ? `0 0 0 2px ${T.cyan}, 0 0 14px ${T.cyan}66` : 'none',
-                    background: '#161a26', flexShrink: 0,
-                  }}>
-                    <img src={championIconUrl(ch.champion_key)} alt={ch.champion_key}
-                      style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  </div>
-                ))}
+          {/* Champion pool par rôle — port de PoolGroup (desktop/profile.jsx) */}
+          {(() => {
+            const mainRoles = p?.matching_prefs?.main_roles ?? []
+            const labels: Record<string, 'PRINCIPAL' | 'SECONDAIRE'> = {
+              ...(mainRoles[0] ? { [mainRoles[0]]: 'PRINCIPAL' } : {}),
+              ...(mainRoles[1] ? { [mainRoles[1]]: 'SECONDAIRE' } : {}),
+            }
+            // Ordre : main role d'abord, secondaire ensuite
+            const orderedRoles = mainRoles.filter(r => (champPool[r] ?? []).length > 0)
+            if (orderedRoles.length === 0) return null
+            const totalChamps = orderedRoles.reduce((n, r) => n + (champPool[r]?.length ?? 0), 0)
+            return (
+              <div style={{ gridColumn: '1 / -1' }}>
+                {/* Header section */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                  <SectionLabel>CHAMPION POOL</SectionLabel>
+                  <span style={{ fontFamily: T.mono, fontSize: 9.5, color: T.textMute, letterSpacing: '0.1em' }}>
+                    {totalChamps} CHAMPS · {orderedRoles.length} RÔLE{orderedRoles.length > 1 ? 'S' : ''}
+                  </span>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  {orderedRoles.map(r => (
+                    <PoolGroup
+                      key={r}
+                      role={r}
+                      label={labels[r] ?? 'PRINCIPAL'}
+                      champIds={champPool[r] ?? []}
+                      masteryMap={masteryMap}
+                    />
+                  ))}
+                </div>
               </div>
-            </div>
-          )}
+            )
+          })()}
 
-          {/* Playstyle — gridColumn 1/-1 */}
+          {/* Playstyle */}
           {playstyles.length > 0 && (
             <div style={{ gridColumn: '1 / -1' }}>
               <SectionLabel>PLAYSTYLE</SectionLabel>
@@ -420,62 +455,79 @@ function DuoDetailPane({ item, avail, champs, onRequest }: {
             </div>
           )}
 
-          {/* Availability — gridColumn 1/-1 */}
+          {/* Availability */}
           {avail.length > 0 && (
             <div style={{ gridColumn: '1 / -1' }}>
               <SectionLabel>AVAILABILITY · THIS WEEK</SectionLabel>
               <AvailabilityHeat slots={avail} />
             </div>
           )}
-
         </div>
       </div>
 
       {/* Sticky CTA */}
-      <div style={{
-        flexShrink: 0, display: 'flex', alignItems: 'center', gap: 12,
-        padding: '16px 34px',
-        borderTop: `1px solid ${T.lineStrong}`,
-        background: 'rgba(10,12,20,0.86)', backdropFilter: 'blur(14px)',
-      }}>
-        <button onClick={onRequest} style={{
-          display: 'inline-flex', alignItems: 'center', gap: 8,
-          padding: '14px 22px', borderRadius: 10, border: 'none', cursor: 'pointer',
-          background: `linear-gradient(135deg, ${T.cyan}, ${T.violet})`,
-          color: '#001018',
-          fontFamily: T.display, fontSize: 14, letterSpacing: '0.1em',
-          boxShadow: `0 0 0 1px ${T.cyan}66, 0 8px 24px -8px ${T.cyan}80`,
-        }}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#001018" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M5 12h14M13 6l6 6-6 6" />
-          </svg>
-          Send duo request
-        </button>
-        <button style={{
-          display: 'inline-flex', alignItems: 'center', gap: 7,
-          padding: '13px 18px', borderRadius: 10, cursor: 'pointer',
-          background: 'rgba(255,255,255,0.04)', border: `1px solid ${T.lineStrong}`,
-          color: T.text, fontFamily: T.body, fontSize: 14, fontWeight: 600,
-        }}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M21 12a8 8 0 01-11.5 7.2L4 21l1.8-5.5A8 8 0 1121 12z" />
-          </svg>
-          Message
-        </button>
+      <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 12, padding: '16px 34px', borderTop: `1px solid ${T.lineStrong}`, background: 'rgba(10,12,20,0.86)', backdropFilter: 'blur(14px)' }}>
+
+        {/* ── Cas 1 : pas de demande active → boutons standard */}
+        {!ri && (
+          <>
+            <button onClick={onOpenRequest} style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '14px 22px', borderRadius: 10, border: 'none', cursor: 'pointer', background: `linear-gradient(135deg, ${T.cyan}, ${T.violet})`, color: '#001018', fontFamily: T.display, fontSize: 14, letterSpacing: '0.1em', boxShadow: `0 0 0 1px ${T.cyan}66, 0 8px 24px -8px ${T.cyan}80` }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#001018" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
+              Send duo request
+            </button>
+            <button disabled style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '13px 18px', borderRadius: 10, cursor: 'not-allowed', background: 'rgba(255,255,255,0.02)', border: `1px solid ${T.line}`, color: T.textMute, fontFamily: T.body, fontSize: 14, fontWeight: 600, opacity: 0.5 }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a8 8 0 01-11.5 7.2L4 21l1.8-5.5A8 8 0 1121 12z" /></svg>
+              Message
+            </button>
+          </>
+        )}
+
+        {/* ── Cas 2 : demande envoyée par moi, en attente */}
+        {isPendingFromMe && (
+          <>
+            <button disabled style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '14px 22px', borderRadius: 10, cursor: 'not-allowed', background: 'rgba(255,255,255,0.06)', border: `1px solid ${T.lineStrong}`, color: T.textDim, fontFamily: T.display, fontSize: 14, letterSpacing: '0.1em' }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={T.live} strokeWidth="2.5" strokeLinecap="round"><path d="M20 6L9 17l-5-5"/></svg>
+              Demande envoyée
+            </button>
+            <button disabled style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '13px 18px', borderRadius: 10, cursor: 'not-allowed', background: 'rgba(255,255,255,0.02)', border: `1px solid ${T.line}`, color: T.textMute, fontFamily: T.body, fontSize: 14, fontWeight: 600, opacity: 0.5 }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a8 8 0 01-11.5 7.2L4 21l1.8-5.5A8 8 0 1121 12z" /></svg>
+              Message
+            </button>
+          </>
+        )}
+
+        {/* ── Cas 3 : cette personne m'a envoyé une demande */}
+        {isPendingToMe && ri && (
+          <>
+            <button onClick={() => onAccept(ri.id)} style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '14px 22px', borderRadius: 10, border: 'none', cursor: 'pointer', background: `linear-gradient(135deg, ${T.live}cc, ${T.cyan})`, color: '#001810', fontFamily: T.display, fontSize: 14, letterSpacing: '0.1em', boxShadow: `0 0 0 1px ${T.live}66, 0 8px 24px -8px ${T.live}60` }}>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#001810" strokeWidth="2.8" strokeLinecap="round"><path d="M20 6L9 17l-5-5"/></svg>
+              Accepter
+            </button>
+            <button onClick={() => onDecline(ri.id)} style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '13px 18px', borderRadius: 10, cursor: 'pointer', background: `${T.danger}18`, border: `1px solid ${T.danger}55`, color: T.danger, fontFamily: T.body, fontSize: 14, fontWeight: 600 }}>
+              Refuser
+            </button>
+          </>
+        )}
+
+        {/* ── Cas 4 : duo accepté → Message débloqué */}
+        {isAccepted && ri && (
+          <>
+            <button disabled style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '14px 22px', borderRadius: 10, cursor: 'not-allowed', background: `${T.live}18`, border: `1px solid ${T.live}44`, color: T.live, fontFamily: T.display, fontSize: 14, letterSpacing: '0.1em' }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={T.live} strokeWidth="2.5" strokeLinecap="round"><path d="M20 6L9 17l-5-5"/></svg>
+              Duo actif
+            </button>
+            <button onClick={() => ri.conversationId && onMessage(ri.conversationId)} style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '13px 18px', borderRadius: 10, cursor: 'pointer', background: `${T.cyan}14`, border: `1px solid ${T.cyan}55`, color: T.cyan, fontFamily: T.body, fontSize: 14, fontWeight: 600 }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a8 8 0 01-11.5 7.2L4 21l1.8-5.5A8 8 0 1121 12z" /></svg>
+              Message
+            </button>
+          </>
+        )}
+
+        {/* Save / Skip icons */}
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 10 }}>
-          {/* Save / Skip */}
-          {[
-            ['M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z', T.textDim],
-            ['M18 6L6 18M6 6l12 12', '#ff3d6e'],
-          ].map(([d, stroke], i) => (
-            <button key={i} style={{
-              width: 48, height: 48, borderRadius: 12, cursor: 'pointer',
-              background: 'rgba(255,255,255,0.04)', border: `1px solid ${T.lineStrong}`,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-            }}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={stroke} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d={d} />
-              </svg>
+          {[['M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z', T.textDim], ['M18 6L6 18M6 6l12 12', T.danger]].map(([d, stroke], i) => (
+            <button key={i} style={{ width: 48, height: 48, borderRadius: 12, cursor: 'pointer', background: 'rgba(255,255,255,0.04)', border: `1px solid ${T.lineStrong}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={stroke} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d={d} /></svg>
             </button>
           ))}
         </div>
@@ -494,6 +546,8 @@ export default function DuoFeed({
   initialPrefs: { looking_for_roles: string[]; rank_floor: string | null; region: string | null } | null
 }) {
   const supabase = createClient()
+  const router   = useRouter()
+  const { onlineIds, onlineCount } = usePresence(userId)
 
   const [filters, setFilters] = useState<Filters>({
     role: initialPrefs?.looking_for_roles?.[0] ?? null,
@@ -502,19 +556,24 @@ export default function DuoFeed({
     voice: null,
     region: initialPrefs?.region ?? null,
   })
-  const [showFilters, setShowFilters] = useState(false)
-  const [items, setItems] = useState<DuoItem[]>([])
-  const [loading, setLoading] = useState(true)
-  const [selectedId, setSelectedId] = useState<string | null>(null)
-  const [detailAvail, setDetailAvail] = useState<{ weekday: number; slot: number; intensity: number }[]>([])
-  const [detailChamps, setDetailChamps] = useState<{ champion_key: string; mastery_level: number }[]>([])
+  const [showFilters,  setShowFilters]  = useState(false)
+  const [myProfile,    setMyProfile]    = useState<DuoRequestMe | null>(null)
+  const [showModal,    setShowModal]    = useState(false)
+  const [items,        setItems]        = useState<DuoItem[]>([])
+  const [loading,      setLoading]      = useState(true)
+  const [selectedId,   setSelectedId]   = useState<string | null>(null)
+  const [detailAvail,  setDetailAvail]  = useState<{ weekday: number; slot: number; intensity: number }[]>([])
+  const [detailPool,    setDetailPool]    = useState<Record<string, string[]>>({})
+  // mastery par champion : { Ahri: { level: 7, points: 112000 } }
+  const [detailMastery, setDetailMastery] = useState<Record<string, { level: number; points: number }>>({})
+  const [detailRequest, setDetailRequest] = useState<RequestInfo>(null)
 
-  // ── Active chips
+  // Active chips
   const chips: { id: string; label: string; role?: string }[] = []
-  if (filters.role)     chips.push({ id: 'role',     label: filters.role,                        role: filters.role })
+  if (filters.role)      chips.push({ id: 'role',      label: filters.role, role: filters.role })
   if (filters.rankFloor) chips.push({ id: 'rankFloor', label: filters.rankFloor.toUpperCase() + '+' })
   if (filters.voice !== null) chips.push({ id: 'voice', label: filters.voice ? 'VOCAL' : 'NO VOICE' })
-  if (filters.region)   chips.push({ id: 'region',   label: filters.region.toUpperCase() })
+  if (filters.region)    chips.push({ id: 'region',    label: filters.region.toUpperCase() })
 
   const removeChip = (id: string) => {
     if (id === 'role')      setFilters(f => ({ ...f, role: null }))
@@ -528,6 +587,7 @@ export default function DuoFeed({
     if (!userId) { setLoading(false); return }
     setLoading(true)
     setSelectedId(null)
+    setDetailRequest(null)
 
     const { data: feed, error } = await supabase.rpc('duo_feed', {
       p_user_id:      userId,
@@ -565,35 +625,131 @@ export default function DuoFeed({
 
   useEffect(() => { loadFeed() }, [loadFeed])
 
-  // ── Fetch detail data on selection change
+  // ── Fetch profil courant (pour DuoRequestModal "Ce que X verra")
   useEffect(() => {
-    if (!selectedId) return
-    setDetailAvail([])
-    setDetailChamps([])
+    if (!userId) return
     ;(async () => {
-      const [{ data: avail }, { data: ra }] = await Promise.all([
-        supabase.from('availability').select('weekday, slot, intensity').eq('profile_id', selectedId),
-        supabase.from('riot_accounts').select('id').eq('profile_id', selectedId).maybeSingle(),
-      ])
-      setDetailAvail(avail ?? [])
-      if (ra?.id) {
-        const { data: champs } = await supabase
-          .from('champion_mastery')
-          .select('champion_key, mastery_level')
-          .eq('riot_account_id', ra.id)
-          .not('champion_key', 'is', null)
-          .order('mastery_points', { ascending: false })
-          .limit(6)
-        setDetailChamps(champs ?? [])
+      const { data } = await supabase
+        .from('profiles')
+        .select('display_name, riot_accounts(game_name, ranks(tier, division, league_points, queue)), matching_prefs(main_roles)')
+        .eq('id', userId)
+        .maybeSingle()
+      if (data) {
+        const ra   = (data as any).riot_accounts
+        const mp   = (data as any).matching_prefs
+        const solo = (ra?.ranks ?? []).find((r: any) => r.queue === 'RANKED_SOLO_5x5') ?? null
+        setMyProfile({
+          name:  ra?.game_name ?? (data as any).display_name ?? 'MOI',
+          role:  mp?.main_roles?.[0]          ?? null,
+          rank:  solo?.tier?.toLowerCase()    ?? null,
+          tier:  solo?.division               ?? null,
+          lp:    solo?.league_points          ?? null,
+          hue:   180,
+        })
       }
     })()
-  }, [selectedId]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [userId]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Fetch detail data + request status on selection change
+  useEffect(() => {
+    if (!selectedId || !userId) return
+    setDetailAvail([])
+    setDetailPool({})
+    setDetailMastery({})
+    setDetailRequest(null)
+    ;(async () => {
+      const [{ data: avail }, { data: prefs }, { data: ra }, { data: req }] = await Promise.all([
+        supabase.from('availability').select('weekday, slot, intensity').eq('profile_id', selectedId),
+        supabase.from('matching_prefs').select('champion_pool').eq('profile_id', selectedId).maybeSingle(),
+        supabase.from('riot_accounts').select('id').eq('profile_id', selectedId).maybeSingle(),
+        supabase
+          .from('duo_requests')
+          .select('id, status, from_profile, conversation_id')
+          .or(`from_profile.eq.${selectedId},to_profile.eq.${selectedId}`)
+          .in('status', ['pending', 'accepted'])
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle(),
+      ])
+
+      setDetailAvail(avail ?? [])
+      setDetailPool((prefs?.champion_pool as Record<string, string[]>) ?? {})
+
+      if (ra?.id) {
+        const { data: mastery } = await supabase
+          .from('champion_mastery')
+          .select('champion_key, mastery_level, mastery_points')
+          .eq('riot_account_id', ra.id)
+        const map: Record<string, { level: number; points: number }> = {}
+        for (const m of mastery ?? []) {
+          if (m.champion_key) map[m.champion_key] = { level: m.mastery_level, points: m.mastery_points }
+        }
+        setDetailMastery(map)
+      }
+
+      if (req) {
+        setDetailRequest({
+          id: req.id,
+          status: req.status as NonNullable<RequestInfo>['status'],
+          fromMe: req.from_profile === userId,
+          conversationId: req.conversation_id ?? null,
+        })
+      }
+    })()
+  }, [selectedId, userId]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Actions
+  async function handleSendRequest(message: string) {
+    if (!selectedId) return
+    const selectedItem = items.find(i => i.candidate_id === selectedId)
+    const res = await fetch('/api/duo/request', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        to_profile: selectedId,
+        match_score: selectedItem?.score ?? null,
+        message,
+      }),
+    })
+    if (res.ok) {
+      const data = await res.json()
+      setDetailRequest({ id: data.id, status: 'pending', fromMe: true, conversationId: null })
+      setShowModal(false)
+    }
+  }
+
+  async function handleAccept(requestId: string) {
+    const res = await fetch('/api/duo/respond', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ request_id: requestId, action: 'accept' }),
+    })
+    if (res.ok) {
+      const data = await res.json()
+      setDetailRequest(prev => prev ? { ...prev, status: 'accepted', conversationId: data.conversation_id } : null)
+    }
+  }
+
+  async function handleDecline(requestId: string) {
+    const res = await fetch('/api/duo/respond', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ request_id: requestId, action: 'decline' }),
+    })
+    if (res.ok) {
+      setDetailRequest(null)
+    }
+  }
+
+  function handleMessage(conversationId: string) {
+    router.push(`/inbox?conv=${conversationId}`)
+  }
 
   const fitItems      = items.filter(i => !i.is_degraded)
   const degradedItems = items.filter(i => i.is_degraded)
   const selectedItem  = items.find(i => i.candidate_id === selectedId) ?? null
+  const selectedProfile = selectedItem?.profile ?? null
 
-  // ── Empty states
   if (!userId) return (
     <div style={{ display: 'flex', height: '100vh', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 14 }}>
       <div style={{ fontFamily: T.mono, fontSize: 10, color: T.cyan, letterSpacing: '0.24em' }}>◢ COMPATIBILITY ENGINE</div>
@@ -610,35 +766,47 @@ export default function DuoFeed({
   const danger = '#ff3d6e'
 
   return (
-    // Port de DesktopShell main area : flexDirection column (DTopBar + content)
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
 
-      {/* ── DTopBar — port exact de desktop/shell.jsx → DTopBar */}
-      <div style={{
-        flexShrink: 0, height: 76, boxSizing: 'border-box',
-        display: 'flex', alignItems: 'center', gap: 24, padding: '0 28px',
-        borderBottom: `1px solid ${T.line}`,
-        background: 'rgba(10,12,20,0.6)', backdropFilter: 'blur(12px)',
-      }}>
+      {/* Modal d'envoi de demande */}
+      {showModal && selectedItem && (() => {
+        const tName = playerName(selectedProfile)
+        const tRank = soloRank(selectedProfile)
+        const target: DuoRequestTarget = {
+          name:    tName,
+          tag:     selectedProfile?.riot_accounts?.tag_line ? `#${selectedProfile.riot_accounts.tag_line}` : '',
+          role:    selectedItem.candidate_role ?? selectedProfile?.matching_prefs?.main_roles?.[0] ?? null,
+          looking: selectedProfile?.matching_prefs?.looking_for_roles?.[0] ?? null,
+          rank:    tRank?.tier?.toLowerCase() ?? null,
+          tier:    tRank?.division            ?? null,
+          lp:      tRank?.league_points       ?? null,
+          match:   selectedItem.score,
+          hue:     nameHue(tName),
+        }
+        return (
+          <DuoRequestModal
+            target={target}
+            me={myProfile ?? { name: 'MOI', role: null, rank: null, tier: null, lp: null }}
+            onConfirm={handleSendRequest}
+            onClose={() => setShowModal(false)}
+          />
+        )
+      })()}
+
+      {/* DTopBar */}
+      <div style={{ flexShrink: 0, height: 76, boxSizing: 'border-box', display: 'flex', alignItems: 'center', gap: 24, padding: '0 28px', borderBottom: `1px solid ${T.line}`, background: 'rgba(10,12,20,0.6)', backdropFilter: 'blur(12px)' }}>
         <div style={{ minWidth: 0 }}>
           <div style={{ fontFamily: T.mono, fontSize: 9.5, color: T.cyan, letterSpacing: '0.24em', marginBottom: 3 }}>
-            ◢ COMPATIBILITY ENGINE · {items.length} ONLINE
+            ◢ COMPATIBILITY ENGINE · {onlineCount > 0 ? onlineCount : items.length} ONLINE
           </div>
           <div style={{ fontFamily: T.display, fontSize: 24, color: T.text, letterSpacing: '0.02em', lineHeight: 1, whiteSpace: 'nowrap' }}>
             YOUR TOP DUOS
           </div>
         </div>
         <div style={{ flex: 1, maxWidth: 460 }}>
-          <div style={{
-            display: 'flex', alignItems: 'center', gap: 10, height: 42, padding: '0 14px',
-            borderRadius: 11, background: 'rgba(255,255,255,0.04)', border: `1px solid ${T.line}`,
-          }}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={T.textDim} strokeWidth="2" strokeLinecap="round">
-              <circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/>
-            </svg>
-            <span style={{ flex: 1, fontFamily: T.body, fontSize: 13.5, color: T.textMute }}>
-              Search players, teams, champions…
-            </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, height: 42, padding: '0 14px', borderRadius: 11, background: 'rgba(255,255,255,0.04)', border: `1px solid ${T.line}` }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={T.textDim} strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg>
+            <span style={{ flex: 1, fontFamily: T.body, fontSize: 13.5, color: T.textMute }}>Search players, teams, champions…</span>
             <span style={{ display: 'flex', gap: 4 }}>
               {['⌘','K'].map(k => (
                 <kbd key={k} style={{ fontFamily: T.mono, fontSize: 10, color: T.textDim, padding: '2px 6px', borderRadius: 5, background: 'rgba(255,255,255,0.05)', border: `1px solid ${T.line}` }}>{k}</kbd>
@@ -648,176 +816,115 @@ export default function DuoFeed({
         </div>
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 12 }}>
           <button style={{ position: 'relative', width: 42, height: 42, borderRadius: 11, cursor: 'pointer', background: 'rgba(255,255,255,0.04)', border: `1px solid ${T.line}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke={T.text} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M6 8a6 6 0 1112 0c0 7 3 7 3 9H3c0-2 3-2 3-9zM10 21a2 2 0 004 0"/>
-            </svg>
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke={T.text} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 8a6 6 0 1112 0c0 7 3 7 3 9H3c0-2 3-2 3-9zM10 21a2 2 0 004 0"/></svg>
             <span style={{ position: 'absolute', top: 9, right: 10, width: 7, height: 7, borderRadius: '50%', background: danger, boxShadow: `0 0 6px ${danger}`, border: `1.5px solid ${T.bg}` }}/>
           </button>
           <button style={{ width: 42, height: 42, borderRadius: 11, cursor: 'pointer', background: 'rgba(255,255,255,0.04)', border: `1px solid ${T.line}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke={T.text} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="12" r="3"/>
-              <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/>
-            </svg>
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke={T.text} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
           </button>
         </div>
       </div>
 
-      {/* ── Content area (feed + detail) */}
+      {/* Content area (feed + detail) */}
       <div style={{ flex: 1, minHeight: 0, display: 'flex', overflow: 'hidden', position: 'relative' }}>
 
-      {/* ── Filter panel */}
-      {showFilters && (
-        <DuoFilterPanel
-          initial={filters}
-          onClose={() => setShowFilters(false)}
-          onApply={next => { setFilters(next); setShowFilters(false) }}
-        />
-      )}
-
-      {/* ── Feed column (408px) */}
-      <div className="rgg-feed-col" style={{
-        width: 408, flexShrink: 0, height: '100%',
-        display: 'flex', flexDirection: 'column',
-        borderRight: `1px solid ${T.line}`,
-        background: 'rgba(255,255,255,0.012)',
-      }}>
-        {/* Feed header */}
-        <div style={{ flexShrink: 0, padding: '18px 18px 14px', borderBottom: `1px solid ${T.line}` }}>
-          {/* eyebrow + count */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 13 }}>
-            <span style={{ fontFamily: T.mono, fontSize: 10, color: T.textDim, letterSpacing: '0.16em' }}>
-              <span style={{ fontFamily: T.display, fontSize: 15, color: T.text, letterSpacing: '0.04em' }}>
-                {fitItems.length}
-              </span>
-              {' '}MATCHES · TRIÉS PAR % ▾
-            </span>
-            <button
-              onClick={() => setShowFilters(true)}
-              style={{
-                display: 'inline-flex', alignItems: 'center', gap: 7,
-                padding: '9px 12px', borderRadius: 10, cursor: 'pointer',
-                background: `${T.violet}1a`, border: `1px solid ${T.violet}66`,
-                color: T.violet, fontFamily: T.mono, fontSize: 11, fontWeight: 700, letterSpacing: '0.1em',
-              }}
-            >
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={T.violet} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M4 6h16M7 12h10M10 18h4" />
-              </svg>
-              Filtres
-              {chips.length > 0 && (
-                <span style={{
-                  minWidth: 16, height: 16, padding: '0 4px', borderRadius: 8,
-                  background: T.violet, color: '#08051a',
-                  fontFamily: T.mono, fontSize: 9, fontWeight: 700,
-                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                }}>{chips.length}</span>
-              )}
-            </button>
-          </div>
-
-          {/* Active chips */}
-          {chips.length > 0 ? (
-            <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap', alignItems: 'center' }}>
-              {chips.map(chip => {
-                const color = chip.role ? (ROLE_META[chip.role]?.c ?? T.cyan) : T.textDim
-                return (
-                  <span key={chip.id} style={{
-                    display: 'inline-flex', alignItems: 'center', gap: 6,
-                    padding: '7px 7px 7px 11px', borderRadius: 999,
-                    background: `${color}1f`, border: `1px solid ${color}66`,
-                    color, fontFamily: T.mono, fontSize: 11, fontWeight: 600,
-                    letterSpacing: '0.08em', textTransform: 'uppercase', whiteSpace: 'nowrap',
-                  }}>
-                    {chip.role && <RoleIcon role={chip.role} size={12} active />}
-                    {chip.label}
-                    <button onClick={() => removeChip(chip.id)} style={{
-                      display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                      width: 16, height: 16, borderRadius: '50%', cursor: 'pointer',
-                      border: 'none', padding: 0, background: `${color}26`,
-                    }}>
-                      <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="3.2" strokeLinecap="round">
-                        <path d="M18 6L6 18M6 6l12 12" />
-                      </svg>
-                    </button>
-                  </span>
-                )
-              })}
-            </div>
-          ) : (
-            <div style={{ fontFamily: T.mono, fontSize: 10, color: T.textMute, letterSpacing: '0.1em', padding: '3px 0' }}>
-              AUCUN FILTRE · TOUS LES DUOS EUW EN LIGNE
-            </div>
-          )}
-        </div>
-
-        {/* Feed list — padding 0 14px 18px + gap 9px (maquette exact) */}
-        <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '0 14px 18px', display: 'flex', flexDirection: 'column', gap: 9 }}>
-          {loading ? (
-            Array.from({ length: 7 }).map((_, i) => (
-              <div key={i} style={{
-                height: 72, borderRadius: 14, marginTop: i === 0 ? 9 : 0,
-                background: 'rgba(255,255,255,0.022)', border: `1px solid ${T.line}`,
-                animation: 'rgg-pulse 1.6s ease-in-out infinite',
-              }} />
-            ))
-          ) : (
-            <>
-              {fitItems.map(item => (
-                <DuoFeedRow
-                  key={item.candidate_id} item={item}
-                  selected={selectedId === item.candidate_id}
-                  onClick={() => setSelectedId(item.candidate_id)}
-                />
-              ))}
-
-              {/* Separator si < 5 matchs role-fit */}
-              {degradedItems.length > 0 && fitItems.length < 5 && (
-                <>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '4px 2px' }}>
-                    <div style={{ flex: 1, height: 1, background: T.line }} />
-                    <span style={{ fontFamily: T.mono, fontSize: 9, color: T.textMute, letterSpacing: '0.12em', whiteSpace: 'nowrap' }}>
-                      MOINS DE MONDE SUR TES CRITÈRES
-                    </span>
-                    <div style={{ flex: 1, height: 1, background: T.line }} />
-                  </div>
-                  {degradedItems.map(item => (
-                    <DuoFeedRow
-                      key={item.candidate_id} item={item}
-                      selected={selectedId === item.candidate_id}
-                      onClick={() => setSelectedId(item.candidate_id)}
-                    />
-                  ))}
-                </>
-              )}
-
-              {!loading && items.length === 0 && (
-                <div style={{ padding: '48px 0', textAlign: 'center' }}>
-                  <div style={{ fontFamily: T.mono, fontSize: 10, color: T.textMute, letterSpacing: '0.14em' }}>
-                    AUCUN DUO TROUVÉ
-                  </div>
-                </div>
-              )}
-            </>
-          )}
-        </div>
-      </div>
-
-      {/* ── Detail pane */}
-      <div className="rgg-detail-pane" style={{ flex: 1, minWidth: 0, height: '100%' }}>
-        {selectedItem ? (
-          <DuoDetailPane
-            item={selectedItem} avail={detailAvail} champs={detailChamps}
-            onRequest={() => { /* TODO Phase 3 step 5 */ }}
+        {/* Filter panel */}
+        {showFilters && (
+          <DuoFilterPanel
+            initial={filters}
+            onClose={() => setShowFilters(false)}
+            onApply={next => { setFilters(next); setShowFilters(false) }}
           />
-        ) : !loading && (
-          <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <span style={{ fontFamily: T.mono, fontSize: 10, color: T.textMute, letterSpacing: '0.16em' }}>
-              SÉLECTIONNE UN DUO
-            </span>
-          </div>
         )}
-      </div>
 
+        {/* Feed column */}
+        <div className="rgg-feed-col" style={{ width: 408, flexShrink: 0, height: '100%', display: 'flex', flexDirection: 'column', borderRight: `1px solid ${T.line}`, background: 'rgba(255,255,255,0.012)' }}>
+          {/* Feed header */}
+          <div style={{ flexShrink: 0, padding: '18px 18px 14px', borderBottom: `1px solid ${T.line}` }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 13 }}>
+              <span style={{ fontFamily: T.mono, fontSize: 10, color: T.textDim, letterSpacing: '0.16em' }}>
+                <span style={{ fontFamily: T.display, fontSize: 15, color: T.text, letterSpacing: '0.04em' }}>{fitItems.length}</span>
+                {' '}MATCHES · TRIÉS PAR % ▾
+              </span>
+              <button onClick={() => setShowFilters(true)} style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '9px 12px', borderRadius: 10, cursor: 'pointer', background: `${T.violet}1a`, border: `1px solid ${T.violet}66`, color: T.violet, fontFamily: T.mono, fontSize: 11, fontWeight: 700, letterSpacing: '0.1em' }}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={T.violet} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M4 6h16M7 12h10M10 18h4" /></svg>
+                Filtres
+                {chips.length > 0 && <span style={{ minWidth: 16, height: 16, padding: '0 4px', borderRadius: 8, background: T.violet, color: '#08051a', fontFamily: T.mono, fontSize: 9, fontWeight: 700, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>{chips.length}</span>}
+              </button>
+            </div>
+            {chips.length > 0 ? (
+              <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap', alignItems: 'center' }}>
+                {chips.map(chip => {
+                  const color = chip.role ? (ROLE_META[chip.role]?.c ?? T.cyan) : T.textDim
+                  return (
+                    <span key={chip.id} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 7px 7px 11px', borderRadius: 999, background: `${color}1f`, border: `1px solid ${color}66`, color, fontFamily: T.mono, fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
+                      {chip.role && <RoleIcon role={chip.role} size={12} active />}
+                      {chip.label}
+                      <button onClick={() => removeChip(chip.id)} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 16, height: 16, borderRadius: '50%', cursor: 'pointer', border: 'none', padding: 0, background: `${color}26` }}>
+                        <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="3.2" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12" /></svg>
+                      </button>
+                    </span>
+                  )
+                })}
+              </div>
+            ) : (
+              <div style={{ fontFamily: T.mono, fontSize: 10, color: T.textMute, letterSpacing: '0.1em', padding: '3px 0' }}>
+                AUCUN FILTRE · TOUS LES DUOS EUW EN LIGNE
+              </div>
+            )}
+          </div>
+
+          {/* Feed list */}
+          <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '0 14px 18px', display: 'flex', flexDirection: 'column', gap: 9 }}>
+            {loading ? (
+              Array.from({ length: 7 }).map((_, i) => (
+                <div key={i} style={{ height: 72, borderRadius: 14, marginTop: i === 0 ? 9 : 0, background: 'rgba(255,255,255,0.022)', border: `1px solid ${T.line}`, animation: 'rgg-pulse 1.6s ease-in-out infinite' }} />
+              ))
+            ) : (
+              <>
+                {fitItems.map(item => (
+                  <DuoFeedRow key={item.candidate_id} item={item} selected={selectedId === item.candidate_id} online={onlineIds.has(item.candidate_id)} onClick={() => setSelectedId(item.candidate_id)} />
+                ))}
+                {degradedItems.length > 0 && fitItems.length < 5 && (
+                  <>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '4px 2px' }}>
+                      <div style={{ flex: 1, height: 1, background: T.line }} />
+                      <span style={{ fontFamily: T.mono, fontSize: 9, color: T.textMute, letterSpacing: '0.12em', whiteSpace: 'nowrap' }}>MOINS DE MONDE SUR TES CRITÈRES</span>
+                      <div style={{ flex: 1, height: 1, background: T.line }} />
+                    </div>
+                    {degradedItems.map(item => (
+                      <DuoFeedRow key={item.candidate_id} item={item} selected={selectedId === item.candidate_id} online={onlineIds.has(item.candidate_id)} onClick={() => setSelectedId(item.candidate_id)} />
+                    ))}
+                  </>
+                )}
+                {!loading && items.length === 0 && (
+                  <div style={{ padding: '48px 0', textAlign: 'center' }}>
+                    <div style={{ fontFamily: T.mono, fontSize: 10, color: T.textMute, letterSpacing: '0.14em' }}>AUCUN DUO TROUVÉ</div>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* Detail pane */}
+        <div className="rgg-detail-pane" style={{ flex: 1, minWidth: 0, height: '100%' }}>
+          {selectedItem ? (
+            <DuoDetailPane
+              item={selectedItem} avail={detailAvail} champPool={detailPool} masteryMap={detailMastery}
+              online={onlineIds.has(selectedItem.candidate_id)}
+              requestInfo={detailRequest}
+              onOpenRequest={() => setShowModal(true)}
+              onAccept={handleAccept}
+              onDecline={handleDecline}
+              onMessage={handleMessage}
+            />
+          ) : !loading && (
+            <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <span style={{ fontFamily: T.mono, fontSize: 10, color: T.textMute, letterSpacing: '0.16em' }}>SÉLECTIONNE UN DUO</span>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   )

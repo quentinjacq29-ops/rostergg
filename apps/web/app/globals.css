@@ -2,6 +2,18 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Sleek scrollbars — dark/neon, thin, neon thumb on hover (Desktop 10 V6) */
+* { scrollbar-width: thin; scrollbar-color: rgba(120,140,180,0.18) transparent; }
+*::-webkit-scrollbar { width: 6px; height: 6px; }
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb {
+  background: rgba(120,140,180,0.16);
+  border-radius: 999px;
+  transition: background .2s;
+}
+*::-webkit-scrollbar-thumb:hover { background: rgba(80,220,255,0.45); }
+*::-webkit-scrollbar-corner { background: transparent; }
+
 :root {
   --void: #06070b;
   --bg: #0a0c14;

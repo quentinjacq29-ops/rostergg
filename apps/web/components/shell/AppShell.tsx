@@ -35,7 +35,7 @@ const NAV = [
     icon: <><path d="M14.5 17.5L3 6V3h3l11.5 11.5"/><path d="M13 19l6-6M16 16l4 4M19 21l2-2"/><path d="M14.5 6.5L18 3h3v3l-3.5 3.5"/></>,
   },
   {
-    id: 'inbox', label: 'Inbox', href: '/inbox', accent: T.cyan, count: 0,
+    id: 'inbox', label: 'Inbox', href: '/inbox', accent: T.cyan,
     icon: <path d="M21 12a8 8 0 01-11.5 7.2L4 21l1.8-5.5A8 8 0 1121 12z"/>,
   },
 ]
@@ -45,17 +45,19 @@ type ShellUser = {
   gameName: string | null
   tagLine: string | null
   avatarUrl: string | null
-  rankKey?: string | null      // 'diamond', 'platinum'…
-  rankLabel?: string | null    // 'DIAMOND II · 78 LP'
+  rankKey?: string | null
+  rankLabel?: string | null
   rankHue?: number
 }
 
 export default function AppShell({
   children,
   user,
+  inboxCount = 0,
 }: {
   children: ReactNode
   user: ShellUser | null
+  inboxCount?: number
 }) {
   const pathname = usePathname()
   const activeId = NAV.find(n => pathname.includes(n.href))?.id ?? 'duo'
@@ -141,14 +143,14 @@ export default function AppShell({
                   <span style={{ flex: 1, fontFamily: T.display, fontSize: 15, letterSpacing: '0.08em', color: on ? T.text : T.textDim }}>
                     {item.label.toUpperCase()}
                   </span>
-                  {item.count ? (
+                  {item.id === 'inbox' && inboxCount > 0 ? (
                     <span style={{
                       minWidth: 19, height: 19, padding: '0 5px', borderRadius: 10,
                       background: T.danger, color: '#fff',
                       fontFamily: T.mono, fontSize: 10, fontWeight: 800,
                       display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                       boxShadow: `0 0 8px ${T.danger}70`,
-                    }}>{item.count}</span>
+                    }}>{inboxCount}</span>
                   ) : null}
                   {item.badge ? (
                     <span style={{
@@ -164,27 +166,6 @@ export default function AppShell({
         </nav>
 
         <div style={{ flex: 1 }}/>
-
-        {/* Queue widget */}
-        <div style={{
-          padding: '12px 14px', borderRadius: 12,
-          background: `linear-gradient(135deg, ${T.queue}12, transparent)`,
-          border: `1px solid ${T.queue}33`,
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-              <span className="rgg-pulse" style={{ width: 7, height: 7, borderRadius: '50%', background: T.queue, boxShadow: `0 0 8px ${T.queue}`, display: 'inline-block' }}/>
-              <span style={{ fontFamily: T.mono, fontSize: 10, color: T.queue, letterSpacing: '0.15em', fontWeight: 600 }}>IN QUEUE</span>
-            </span>
-            <span style={{ fontFamily: T.mono, fontSize: 10, color: T.queue, letterSpacing: '0.1em' }}>02:14</span>
-          </div>
-          <div style={{ marginTop: 9, height: 4, borderRadius: 4, background: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
-            <div style={{ width: '64%', height: '100%', borderRadius: 4, background: `linear-gradient(90deg, ${T.queue}, ${T.gold})`, boxShadow: `0 0 8px ${T.queue}` }}/>
-          </div>
-          <div style={{ marginTop: 8, fontFamily: T.mono, fontSize: 9, color: T.textDim, letterSpacing: '0.08em' }}>
-            RANKED SOLO/DUO · EST. 0:48
-          </div>
-        </div>
 
         {/* User chip */}
         <Link href="/me" style={{ textDecoration: 'none' }}>

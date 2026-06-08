@@ -1,33 +1,39 @@
 'use client'
+// Port fidèle de desktop/flows-more.jsx → EditSearchDesktop (Desktop 11 V6)
 import { useState } from 'react'
 import RoleIcon, { ROLE_META } from '@/components/ui/RoleIcon'
 
-const TIERS = ['IRON','BRONZE','SILVER','GOLD','PLATINUM','EMERALD','DIAMOND','MASTER','GRANDMASTER','CHALLENGER'] as const
-const TIER_SHORTS: Record<string, string> = {
-  IRON: 'IR', BRONZE: 'BR', SILVER: 'SI', GOLD: 'GO',
-  PLATINUM: 'PL', EMERALD: 'EM', DIAMOND: 'DI',
-  MASTER: 'MA', GRANDMASTER: 'GM', CHALLENGER: 'CH',
+const T = {
+  bg: '#0a0c14', surface: '#0f121c', void: '#06070b',
+  line: 'rgba(255,255,255,0.06)', lineStrong: 'rgba(255,255,255,0.12)',
+  text: '#f4f6ff', textDim: '#9aa2bf', textMute: '#5a607a',
+  cyan: '#00e0ff', violet: '#8b5cf6', danger: '#ff3d6e',
+  gold: '#ffd166', live: '#00ff9d',
+  display: 'var(--font-display)', body: 'var(--font-body)', mono: 'var(--font-mono)',
 }
-const TIER_COLORS: Record<string, string> = {
-  IRON: '#9aa2bf', BRONZE: '#cd7f32', SILVER: '#b0b8c8',
-  GOLD: '#ffd166', PLATINUM: '#4dc9b0', EMERALD: '#3ddc97',
-  DIAMOND: '#5b9ff5', MASTER: '#b58dff', GRANDMASTER: '#ff6a4d',
-  CHALLENGER: '#f4e93e',
+
+const RANKS: Record<string, string> = {
+  iron: '#7e7a78', bronze: '#a05e2b', silver: '#a3b5c0', gold: '#c89b3c',
+  platinum: '#4bc4b0', emerald: '#3ead84', diamond: '#6fc6e7',
+  master: '#9d58c4', grandmaster: '#d84f4f', challenger: '#ebd990',
 }
-const REGIONS = [
-  { label: 'EUW',  value: 'euw1' },
-  { label: 'EUNE', value: 'eun1' },
-  { label: 'NA',   value: 'na1'  },
-  { label: 'KR',   value: 'kr'   },
-  { label: 'BR',   value: 'br1'  },
-]
-const ROLES = ['TOP','JNG','MID','ADC','SUP']
-const LANGS = [
-  { code: 'fr', label: 'FR', name: 'Français' },
-  { code: 'en', label: 'EN', name: 'English'  },
-  { code: 'es', label: 'ES', name: 'Español'  },
-  { code: 'de', label: 'DE', name: 'Deutsch'  },
-  { code: 'it', label: 'IT', name: 'Italiano' },
+
+const TIER_ORDER = ['IRON','BRONZE','SILVER','GOLD','PLATINUM','EMERALD','DIAMOND','MASTER','GRANDMASTER','CHALLENGER']
+
+const LANGS: Record<string, { label: string; name: string; c: string }> = {
+  fr: { label: 'FR', name: 'Français', c: '#5b8def' },
+  en: { label: 'EN', name: 'English',  c: '#e85a5a' },
+  es: { label: 'ES', name: 'Español',  c: '#ffb547' },
+  de: { label: 'DE', name: 'Deutsch',  c: '#3ddc97' },
+}
+
+const STYLES = [
+  { label: 'Tryhard', color: T.danger },
+  { label: 'Vocal',   color: T.cyan   },
+  { label: 'Roaming', color: T.cyan   },
+  { label: 'Scaling', color: T.cyan   },
+  { label: 'Climb',   color: T.gold   },
+  { label: 'Clash',   color: T.gold   },
 ]
 
 export type FilterValues = {
@@ -38,16 +44,48 @@ export type FilterValues = {
   region: string | null
 }
 
-function SectionTitle({ children, sub }: { children: React.ReactNode; sub?: string }) {
+// ── Section kicker — port exact ("◢ LABEL" en mono cyan)
+function Section({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div style={{ marginBottom: 12 }}>
-      <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: '#9aa2bf', letterSpacing: '0.22em' }}>
-        {children}
+    <div style={{ marginBottom: 26 }}>
+      <div style={{ fontFamily: T.mono, fontSize: 10, color: T.cyan, letterSpacing: '0.2em', marginBottom: 13 }}>
+        ◢ {label}
       </div>
-      {sub && (
-        <div style={{ fontFamily: 'var(--font-body)', fontSize: 11, color: '#5a607a', marginTop: 3 }}>{sub}</div>
-      )}
+      {children}
     </div>
+  )
+}
+
+// ── LangChip — port de screens/flex-components.jsx
+function LangChip({ code, primary = false }: { code: string; primary?: boolean }) {
+  const l = LANGS[code] ?? LANGS.fr
+  return (
+    <span style={{
+      display: 'inline-flex', alignItems: 'center', gap: 5,
+      padding: '3px 8px', borderRadius: 6,
+      background: primary ? `${l.c}22` : 'rgba(255,255,255,0.04)',
+      border: `1px solid ${primary ? l.c + '66' : T.line}`,
+      fontFamily: T.mono, fontSize: 10, fontWeight: 700,
+      color: primary ? l.c : T.text, letterSpacing: '0.1em',
+    }}>
+      <span style={{ width: 4, height: 4, borderRadius: '50%', background: l.c, boxShadow: primary ? `0 0 4px ${l.c}` : 'none' }}/>
+      {l.label}
+      {primary && <span style={{ fontSize: 7, color: l.c, opacity: 0.7, letterSpacing: '0.15em' }}>·MAIN</span>}
+    </span>
+  )
+}
+
+// ── DChip — port de desktop/shell.jsx
+function DChip({ children, active = false, accent = T.cyan }: { children: React.ReactNode; active?: boolean; accent?: string }) {
+  return (
+    <span style={{
+      display: 'inline-flex', alignItems: 'center', gap: 6,
+      padding: '8px 13px', borderRadius: 999, cursor: 'pointer', whiteSpace: 'nowrap',
+      background: active ? `${accent}1f` : 'rgba(255,255,255,0.04)',
+      border: `1px solid ${active ? accent + '66' : T.line}`,
+      color: active ? accent : T.textDim,
+      fontFamily: T.mono, fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase',
+    }}>{children}</span>
   )
 }
 
@@ -65,296 +103,248 @@ export default function DuoFilterPanel({
   const set = <K extends keyof FilterValues>(k: K, v: FilterValues[K]) =>
     setF(prev => ({ ...prev, [k]: v }))
 
-  const activeCount = [f.role, f.rankFloor ?? f.rankCeiling, f.voice !== null ? true : null, f.region]
-    .filter(Boolean).length
+  // Elo slider visual — compute positions from TIER_ORDER
+  const floorIdx = f.rankFloor ? TIER_ORDER.indexOf(f.rankFloor.toUpperCase()) : 1
+  const ceilIdx  = f.rankCeiling ? TIER_ORDER.indexOf(f.rankCeiling.toUpperCase()) : 7
+  const fi = Math.max(0, floorIdx === -1 ? 1 : floorIdx)
+  const ci = Math.min(TIER_ORDER.length - 1, ceilIdx === -1 ? 7 : ceilIdx)
+  const leftPct  = Math.round((fi / (TIER_ORDER.length - 1)) * 100)
+  const rightPct = Math.round((ci / (TIER_ORDER.length - 1)) * 100)
+  const floorColor  = RANKS[TIER_ORDER[fi].toLowerCase()] ?? T.cyan
+  const ceilColor   = RANKS[TIER_ORDER[ci].toLowerCase()] ?? T.violet
 
   return (
-    /* overlay */
-    <div
-      onClick={onClose}
-      style={{
-        position: 'absolute', inset: 0, zIndex: 40,
-        background: 'rgba(6,7,11,0.7)', backdropFilter: 'blur(4px)',
-        display: 'flex',
-      }}
-    >
-      {/* panel — stop propagation so clicks inside don't close */}
-      <div
-        onClick={e => e.stopPropagation()}
-        style={{
-          width: 408, flexShrink: 0, height: '100%',
-          background: '#0f121c',
-          borderRight: '1px solid rgba(255,255,255,0.08)',
-          display: 'flex', flexDirection: 'column',
-          overflowY: 'auto',
-        }}
-      >
-        {/* ── Header */}
-        <div style={{
-          flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '22px 20px 16px',
-          borderBottom: '1px solid rgba(255,255,255,0.06)',
+    // Overlay couvre toute la zone main (topbar + content)
+    <div style={{
+      position: 'absolute', inset: 0, zIndex: 50,
+      background: T.bg,
+      display: 'flex', flexDirection: 'column',
+      backgroundImage: `radial-gradient(900px 500px at 50% -10%, ${T.violet}14, transparent 60%)`,
+    }}>
+      {/* ── Topbar — port de DTopBar (hauteur 76px, blur) */}
+      <div style={{
+        flexShrink: 0, height: 76, boxSizing: 'border-box',
+        display: 'flex', alignItems: 'center', gap: 24, padding: '0 28px',
+        borderBottom: `1px solid ${T.line}`,
+        background: 'rgba(10,12,20,0.6)', backdropFilter: 'blur(12px)',
+      }}>
+        {/* Back button */}
+        <button onClick={onClose} style={{
+          display: 'inline-flex', alignItems: 'center', gap: 8,
+          padding: '0 16px 0 0', background: 'none', border: 'none',
+          cursor: 'pointer', color: T.textDim,
         }}>
-          <button
-            onClick={onClose}
-            style={{
-              width: 36, height: 36, borderRadius: 10,
-              border: '1px solid rgba(255,255,255,0.08)',
-              background: 'rgba(255,255,255,0.03)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
-            }}
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f4f6ff" strokeWidth="2.5" strokeLinecap="round">
-              <path d="M15 6l-6 6 6 6"/>
-            </svg>
-          </button>
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: '#00e0ff', letterSpacing: '0.22em' }}>
-              ◢ DUO SEARCH
-            </div>
-            <div style={{ fontFamily: 'var(--font-display)', fontSize: 16, color: '#f4f6ff', letterSpacing: '0.08em', marginTop: 4 }}>
-              EDIT FILTERS
-            </div>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={T.textDim} strokeWidth="2" strokeLinecap="round">
+            <path d="M19 12H5M11 6l-6 6 6 6"/>
+          </svg>
+        </button>
+        {/* Title */}
+        <div style={{ minWidth: 0 }}>
+          <div style={{ fontFamily: T.mono, fontSize: 9.5, color: T.cyan, letterSpacing: '0.24em', marginBottom: 3 }}>
+            ◢ FILTRES DE RECHERCHE
           </div>
+          <div style={{ fontFamily: T.display, fontSize: 24, color: T.text, letterSpacing: '0.02em', lineHeight: 1 }}>
+            AFFINE TON MATCHING
+          </div>
+        </div>
+        {/* Search */}
+        <div style={{ flex: 1, maxWidth: 460 }}>
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 10, height: 42, padding: '0 14px',
+            borderRadius: 11, background: 'rgba(255,255,255,0.04)', border: `1px solid ${T.line}`,
+          }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={T.textDim} strokeWidth="2" strokeLinecap="round">
+              <circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/>
+            </svg>
+            <span style={{ flex: 1, fontFamily: T.body, fontSize: 13.5, color: T.textMute }}>Rechercher…</span>
+          </div>
+        </div>
+        {/* Réinitialiser */}
+        <div style={{ marginLeft: 'auto' }}>
           <button
             onClick={() => setF({ role: null, rankFloor: null, rankCeiling: null, voice: null, region: null })}
             style={{
-              height: 36, padding: '0 12px', borderRadius: 10,
-              background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
-              color: '#9aa2bf', fontFamily: 'var(--font-mono)', fontSize: 10, fontWeight: 700,
-              letterSpacing: '0.14em', cursor: 'pointer',
+              display: 'inline-flex', alignItems: 'center', gap: 9,
+              padding: '13px 22px', borderRadius: 12, cursor: 'pointer',
+              border: `1px solid ${T.lineStrong}`,
+              background: 'rgba(255,255,255,0.05)',
+              color: T.text,
+              fontFamily: T.display, fontSize: 13, fontWeight: 700,
+              letterSpacing: '0.1em', textTransform: 'uppercase',
             }}
           >
-            RESET
+            Réinitialiser
           </button>
         </div>
+      </div>
 
-        {/* ── Scrollable body */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: '18px 20px 100px' }}>
+      {/* ── Content — centré, maxWidth 760 */}
+      <div style={{ flex: 1, overflowY: 'auto', display: 'flex', justifyContent: 'center', padding: '30px 40px 40px' }}>
+        <div style={{ width: '100%', maxWidth: 760 }}>
 
-          {/* ROLE WANTED */}
-          <div style={{ marginBottom: 24 }}>
-            <SectionTitle sub="Le rôle que tu veux trouver">ROLE WANTED</SectionTitle>
-            <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap' }}>
-              {/* PEU IMPORTE */}
-              <button
-                onClick={() => set('role', null)}
-                style={{
-                  padding: '9px 14px', borderRadius: 999, cursor: 'pointer',
-                  background: f.role === null ? '#00e0ff1a' : 'rgba(255,255,255,0.04)',
-                  border: `1px solid ${f.role === null ? '#00e0ff66' : 'rgba(255,255,255,0.08)'}`,
-                  fontFamily: 'var(--font-mono)', fontSize: 10, fontWeight: 700, letterSpacing: '0.1em',
-                  color: f.role === null ? '#00e0ff' : '#5a607a',
-                }}
-              >
-                TOUS RÔLES
-              </button>
-              {ROLES.map(r => {
-                const meta = ROLE_META[r]
+          {/* RÔLE RECHERCHÉ */}
+          <Section label="RÔLE RECHERCHÉ">
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 12 }}>
+              {(['TOP','JNG','MID','ADC','SUP'] as const).map(r => {
                 const on = f.role === r
+                const rc = ROLE_META[r].c
                 return (
-                  <button
-                    key={r}
-                    onClick={() => set('role', on ? null : r)}
-                    style={{
-                      display: 'inline-flex', alignItems: 'center', gap: 6,
-                      padding: '9px 14px', borderRadius: 999, cursor: 'pointer',
-                      background: on ? `${meta.c}1a` : 'rgba(255,255,255,0.04)',
-                      border: `1px solid ${on ? meta.c + '66' : 'rgba(255,255,255,0.08)'}`,
-                    }}
-                  >
-                    <RoleIcon role={r} size={11} active={on} />
-                    <span style={{
-                      fontFamily: 'var(--font-mono)', fontSize: 10, fontWeight: 700,
-                      letterSpacing: '0.1em', color: on ? meta.c : '#5a607a',
-                    }}>{meta.name}</span>
-                  </button>
+                  <div key={r} onClick={() => set('role', on ? null : r)} style={{
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8,
+                    padding: '16px 0', borderRadius: 13, cursor: 'pointer',
+                    background: on ? `${rc}1a` : 'rgba(255,255,255,0.03)',
+                    border: `1px solid ${on ? rc + '66' : T.line}`,
+                  }}>
+                    <RoleIcon role={r} size={24} active={on} />
+                    <span style={{ fontFamily: T.mono, fontSize: 10, color: on ? rc : T.textDim, fontWeight: 700 }}>{r}</span>
+                  </div>
                 )
               })}
             </div>
             {f.role === null && (
-              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: '#5a607a', letterSpacing: '0.12em', marginTop: 8 }}>
-                TOUS RÔLES → Role fit neutralisé, score redistribué
+              <div style={{ marginTop: 10, fontFamily: T.mono, fontSize: 9, color: T.textMute, letterSpacing: '0.12em' }}>
+                AUCUN RÔLE SÉLECTIONNÉ → TOUS RÔLES · Role fit neutralisé dans le score
               </div>
             )}
-          </div>
+          </Section>
 
-          {/* RANK RANGE */}
-          <div style={{ marginBottom: 24 }}>
-            <SectionTitle sub="Rang minimum et maximum">RANK RANGE</SectionTitle>
-            <div style={{
-              padding: '14px', borderRadius: 14,
-              background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.06)',
-            }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 14 }}>
-                <div>
-                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: '#5a607a', letterSpacing: '0.16em', marginBottom: 4 }}>MIN</div>
-                  <div style={{ fontFamily: 'var(--font-display)', fontSize: 16, color: f.rankFloor ? TIER_COLORS[f.rankFloor] : '#5a607a', letterSpacing: '0.04em' }}>
-                    {f.rankFloor ?? 'TOUS'}
-                  </div>
-                </div>
-                <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: '#5a607a', letterSpacing: '0.16em', marginBottom: 4 }}>MAX</div>
-                  <div style={{ fontFamily: 'var(--font-display)', fontSize: 16, color: f.rankCeiling ? TIER_COLORS[f.rankCeiling] : '#5a607a', letterSpacing: '0.04em' }}>
-                    {f.rankCeiling ?? 'TOUS'}
-                  </div>
-                </div>
+          {/* FOURCHETTE D'ELO */}
+          <Section label="FOURCHETTE D'ELO">
+            <div style={{ padding: '18px 20px', borderRadius: 14, background: 'rgba(255,255,255,0.025)', border: `1px solid ${T.line}` }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
+                <span style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 6,
+                  padding: '3px 10px', borderRadius: 999,
+                  background: `${floorColor}1f`, border: `1px solid ${floorColor}40`,
+                  fontFamily: T.mono, fontSize: 10, fontWeight: 600,
+                  color: floorColor, letterSpacing: '0.08em', textTransform: 'uppercase',
+                }}>
+                  {TIER_ORDER[fi]}
+                </span>
+                <span style={{ fontFamily: T.mono, fontSize: 10, color: T.textDim, alignSelf: 'center' }}>→</span>
+                <span style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 6,
+                  padding: '3px 10px', borderRadius: 999,
+                  background: `${ceilColor}1f`, border: `1px solid ${ceilColor}40`,
+                  fontFamily: T.mono, fontSize: 10, fontWeight: 600,
+                  color: ceilColor, letterSpacing: '0.08em', textTransform: 'uppercase',
+                }}>
+                  {TIER_ORDER[ci]}
+                </span>
               </div>
-              <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', marginBottom: 10 }}>
-                {TIERS.map(t => {
-                  const floorIdx = TIERS.indexOf(f.rankFloor as typeof TIERS[number])
-                  const ceilIdx  = TIERS.indexOf(f.rankCeiling as typeof TIERS[number])
-                  const idx = TIERS.indexOf(t)
-                  const inRange = (
-                    (floorIdx === -1 || idx >= floorIdx) &&
-                    (ceilIdx  === -1 || idx <= ceilIdx)
-                  )
+              {/* Visual slider track */}
+              <div style={{ position: 'relative', height: 6, borderRadius: 4, background: 'rgba(255,255,255,0.07)', marginBottom: 12 }}>
+                <div style={{
+                  position: 'absolute', top: 0, bottom: 0, borderRadius: 4,
+                  left: `${leftPct}%`, right: `${100 - rightPct}%`,
+                  background: `linear-gradient(90deg, ${T.cyan}, ${T.violet})`,
+                }}/>
+                <span style={{
+                  position: 'absolute', left: `${leftPct}%`, top: '50%',
+                  transform: 'translate(-50%,-50%)',
+                  width: 16, height: 16, borderRadius: '50%',
+                  background: '#fff', boxShadow: `0 0 10px ${T.cyan}`,
+                  display: 'inline-block',
+                }}/>
+                <span style={{
+                  position: 'absolute', left: `${rightPct}%`, top: '50%',
+                  transform: 'translate(-50%,-50%)',
+                  width: 16, height: 16, borderRadius: '50%',
+                  background: '#fff', boxShadow: `0 0 10px ${T.violet}`,
+                  display: 'inline-block',
+                }}/>
+              </div>
+              {/* Clickable tier labels */}
+              <div style={{ display: 'flex', gap: 4 }}>
+                {TIER_ORDER.map((tier, idx) => {
+                  const inRange = idx >= fi && idx <= ci
+                  const tc = RANKS[tier.toLowerCase()] ?? '#9aa2bf'
                   return (
-                    <button
-                      key={t}
-                      onClick={() => {
-                        const idx2 = TIERS.indexOf(t)
-                        const fi = TIERS.indexOf(f.rankFloor as typeof TIERS[number])
-                        // first click → set floor, second click same → clear, third → set ceiling
-                        if (f.rankFloor === null) { set('rankFloor', t) }
-                        else if (idx2 < fi) { set('rankFloor', t) }
-                        else if (f.rankCeiling === null && t !== f.rankFloor) { set('rankCeiling', t) }
-                        else { setF(prev => ({ ...prev, rankFloor: t, rankCeiling: null })) }
-                      }}
-                      style={{
-                        padding: '5px 8px', borderRadius: 7, cursor: 'pointer',
-                        background: inRange && (f.rankFloor || f.rankCeiling)
-                          ? `${TIER_COLORS[t]}1a` : 'rgba(255,255,255,0.04)',
-                        border: `1px solid ${inRange && (f.rankFloor || f.rankCeiling) ? TIER_COLORS[t] + '55' : 'rgba(255,255,255,0.06)'}`,
-                        fontFamily: 'var(--font-mono)', fontSize: 9, fontWeight: 700,
-                        letterSpacing: '0.1em',
-                        color: inRange && (f.rankFloor || f.rankCeiling) ? TIER_COLORS[t] : '#5a607a',
-                      }}
-                    >
-                      {TIER_SHORTS[t]}
+                    <button key={tier} onClick={() => {
+                      if (f.rankFloor === null || idx < fi) {
+                        set('rankFloor', tier)
+                      } else if (f.rankCeiling === null && tier !== f.rankFloor) {
+                        set('rankCeiling', tier)
+                      } else {
+                        setF(p => ({ ...p, rankFloor: tier, rankCeiling: null }))
+                      }
+                    }} style={{
+                      flex: 1, padding: '4px 2px', borderRadius: 5, cursor: 'pointer',
+                      background: inRange ? `${tc}1a` : 'rgba(255,255,255,0.03)',
+                      border: `1px solid ${inRange ? tc + '55' : T.line}`,
+                      fontFamily: T.mono, fontSize: 7.5, fontWeight: 700,
+                      color: inRange ? tc : T.textMute, letterSpacing: '0.06em',
+                    }}>
+                      {tier.slice(0, 2)}
                     </button>
                   )
                 })}
               </div>
-              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: '#5a607a', letterSpacing: '0.1em' }}>
-                Clique 1× pour min · 2× pour max · même bouton pour reset
+            </div>
+          </Section>
+
+          {/* LANGUES + STATUT — 2-col */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
+            <Section label="LANGUES">
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                <LangChip code="fr" primary />
+                <LangChip code="en" primary />
+                <LangChip code="es" />
+                <LangChip code="de" />
               </div>
-            </div>
+            </Section>
+            <Section label="STATUT">
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                <div onClick={() => set('voice', f.voice === true ? null : true)}>
+                  <DChip active={f.voice === true} accent={T.cyan}>EN LIGNE</DChip>
+                </div>
+                <div onClick={() => set('voice', null)}>
+                  <DChip active={f.voice === null} accent={T.cyan}>EN QUEUE</DChip>
+                </div>
+                <DChip>VÉRIFIÉ</DChip>
+              </div>
+            </Section>
           </div>
 
-          {/* VOICE */}
-          <div style={{ marginBottom: 24 }}>
-            <SectionTitle>VOICE CHAT</SectionTitle>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 7 }}>
-              {([
-                { label: 'REQUIRED', sub: 'Discord / in-game', value: true  as boolean | null },
-                { label: 'ANY',      sub: 'Peu importe',       value: null                    },
-                { label: 'NO VOICE', sub: 'Texte seulement',   value: false as boolean | null },
-              ] as const).map(opt => {
-                const on = f.voice === opt.value
+          {/* STYLE & OBJECTIF */}
+          <Section label="STYLE & OBJECTIF">
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              {STYLES.map(({ label, color }) => {
+                const on = false // style filter not wired to RPC yet
                 return (
-                  <button
-                    key={opt.label}
-                    onClick={() => set('voice', opt.value)}
-                    style={{
-                      padding: '10px 8px', borderRadius: 10, textAlign: 'center', cursor: 'pointer',
-                      background: on ? '#00e0ff1a' : 'rgba(255,255,255,0.03)',
-                      border: `1px solid ${on ? '#00e0ff66' : 'rgba(255,255,255,0.06)'}`,
-                      boxShadow: on ? '0 0 12px #00e0ff25' : 'none',
-                      display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'center',
-                    }}
-                  >
-                    <span style={{
-                      fontFamily: 'var(--font-mono)', fontSize: 10, fontWeight: 700,
-                      letterSpacing: '0.12em', color: on ? '#00e0ff' : '#9aa2bf',
-                    }}>{opt.label}</span>
-                    <span style={{
-                      fontFamily: 'var(--font-body)', fontSize: 10,
-                      color: on ? '#00e0ff' : '#5a607a', opacity: 0.8,
-                    }}>{opt.sub}</span>
-                  </button>
+                  <span key={label} style={{
+                    padding: '9px 15px', borderRadius: 999, cursor: 'pointer',
+                    fontFamily: T.mono, fontSize: 11, fontWeight: 600,
+                    background: on ? `${color}1f` : 'rgba(255,255,255,0.04)',
+                    border: `1px solid ${on ? color + '66' : T.line}`,
+                    color: on ? color : T.textDim,
+                  }}>{label}</span>
                 )
               })}
             </div>
+          </Section>
+
+          {/* CTA */}
+          <div style={{ display: 'flex', gap: 12, marginTop: 6 }}>
+            <button
+              onClick={() => onApply(f)}
+              style={{
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                padding: '16px 28px', borderRadius: 12, border: 'none', cursor: 'pointer',
+                background: `linear-gradient(135deg, ${T.cyan}, ${T.violet})`,
+                color: '#001018',
+                fontFamily: T.display, fontSize: 14, fontWeight: 700,
+                letterSpacing: '0.1em', textTransform: 'uppercase',
+                boxShadow: `0 0 0 1px ${T.cyan}55, 0 12px 30px -10px ${T.cyan}, 0 0 40px -16px ${T.violet}`,
+              }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#001018" strokeWidth="2.5" strokeLinecap="round">
+                <circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/>
+              </svg>
+              Voir les résultats
+            </button>
           </div>
 
-          {/* SERVER */}
-          <div style={{ marginBottom: 24 }}>
-            <SectionTitle>SERVER</SectionTitle>
-            <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap' }}>
-              <button
-                onClick={() => set('region', null)}
-                style={{
-                  padding: '8px 14px', borderRadius: 10, cursor: 'pointer',
-                  background: f.region === null ? '#00e0ff1a' : 'rgba(255,255,255,0.03)',
-                  border: `1px solid ${f.region === null ? '#00e0ff66' : 'rgba(255,255,255,0.06)'}`,
-                  fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 700, letterSpacing: '0.14em',
-                  color: f.region === null ? '#00e0ff' : '#5a607a',
-                }}
-              >
-                TOUS
-              </button>
-              {REGIONS.map(({ label, value }) => {
-                const on = f.region === value
-                return (
-                  <button
-                    key={value}
-                    onClick={() => set('region', on ? null : value)}
-                    style={{
-                      padding: '8px 14px', borderRadius: 10, cursor: 'pointer',
-                      background: on ? '#00e0ff1a' : 'rgba(255,255,255,0.03)',
-                      border: `1px solid ${on ? '#00e0ff66' : 'rgba(255,255,255,0.06)'}`,
-                      fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 700, letterSpacing: '0.14em',
-                      color: on ? '#00e0ff' : '#9aa2bf',
-                    }}
-                  >
-                    {label}
-                  </button>
-                )
-              })}
-            </div>
-          </div>
-
-        </div>
-
-        {/* ── Sticky CTA */}
-        <div style={{
-          flexShrink: 0, padding: '14px 20px 20px',
-          background: 'linear-gradient(180deg, transparent, #0f121c 30%)',
-          display: 'flex', gap: 8,
-          borderTop: '1px solid rgba(255,255,255,0.06)',
-        }}>
-          <button
-            onClick={onClose}
-            style={{
-              padding: '13px 16px', borderRadius: 12, cursor: 'pointer',
-              background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)',
-              color: '#9aa2bf', fontFamily: 'var(--font-display)', fontSize: 12, letterSpacing: '0.12em',
-            }}
-          >
-            CANCEL
-          </button>
-          <button
-            onClick={() => onApply(f)}
-            style={{
-              flex: 1, padding: '13px 18px', borderRadius: 12, border: 'none', cursor: 'pointer',
-              background: 'linear-gradient(135deg, #00e0ff, #8b5cf6)',
-              color: '#001018', fontFamily: 'var(--font-display)', fontSize: 13,
-              letterSpacing: '0.14em', textTransform: 'uppercase', fontWeight: 700,
-              boxShadow: '0 8px 24px -6px #00e0ff80',
-              display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-            }}
-          >
-            VOIR LES RÉSULTATS
-            {activeCount > 0 && (
-              <span style={{
-                minWidth: 20, height: 20, padding: '0 5px', borderRadius: 10,
-                background: 'rgba(0,0,0,0.25)', color: '#001018',
-                fontFamily: 'var(--font-mono)', fontSize: 10, fontWeight: 700,
-                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-              }}>{activeCount}</span>
-            )}
-          </button>
         </div>
       </div>
     </div>
