@@ -1,6 +1,4 @@
 'use client'
-// Port fidèle de desktop/inbox.jsx + desktop/inbox-requests.jsx (v8)
-// 3 panneaux : liste gauche | contenu central | rail contexte
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
@@ -46,6 +44,7 @@ export type Conversation = {
   requestId: string
   conversationId: string
   matchScore: number | null
+  unreadCount: number
   other: {
     id: string
     displayName: string | null
@@ -80,8 +79,7 @@ function rankLabel(rankKey: string | null, division: string | null) {
   return high ? rankKey.toUpperCase() : `${rankKey.toUpperCase().slice(0,3)} ${division ?? ''}`.trim()
 }
 function formatTime(iso: string) {
-  const d = new Date(iso)
-  const now = new Date()
+  const d = new Date(iso), now = new Date()
   const diffDays = Math.floor((now.getTime() - d.getTime()) / 86400000)
   if (diffDays === 0) return d.toLocaleTimeString('fr', { hour: '2-digit', minute: '2-digit' })
   if (diffDays === 1) return 'Hier'
@@ -129,19 +127,18 @@ function ReqStat({ label, value }: { label: string; value: string | number }) {
   )
 }
 
-// ── RequestRow — ligne demande dans la liste gauche ───────────────────────
+// ── RequestRow ────────────────────────────────────────────────────────────
 function RequestRow({ r, selected, onlineIds, onClick }: {
   r: PendingRequest; selected: boolean; onlineIds: Set<string>; onClick: () => void
 }) {
-  const rc = ROLE_META[(r.sender.mainRole ?? 'FILL').toUpperCase()]?.c ?? T.textDim
+  const rc   = ROLE_META[(r.sender.mainRole ?? 'FILL').toUpperCase()]?.c ?? T.textDim
   const name = r.sender.gameName ?? r.sender.displayName ?? '—'
-  const initials = name.slice(0, 2).toUpperCase()
-  const hue = nameHue(name)
+  const hue  = nameHue(name)
   const online = onlineIds.has(r.sender.id)
   return (
     <button onClick={onClick} style={{ position: 'relative', display: 'flex', gap: 12, alignItems: 'flex-start', width: '100%', textAlign: 'left', padding: '13px 14px', borderRadius: 13, cursor: 'pointer', background: selected ? `linear-gradient(100deg, ${T.queue}1c, transparent)` : 'rgba(255,255,255,0.018)', border: `1px solid ${selected ? T.queue + '55' : T.line}` }}>
       {selected && <span style={{ position: 'absolute', left: -1, top: 13, bottom: 13, width: 3, borderRadius: 3, background: T.queue, boxShadow: `0 0 8px ${T.queue}` }} />}
-      <Avatar initials={initials} size={42} rank={r.sender.rankKey ?? 'iron'} hue={hue} online={online} />
+      <Avatar initials={name.slice(0,2).toUpperCase()} size={42} rank={r.sender.rankKey ?? 'iron'} hue={hue} online={online} />
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
           <span style={{ fontFamily: T.display, fontSize: 15, color: T.text, letterSpacing: '0.03em' }}>{name}</span>
@@ -160,7 +157,6 @@ function RequestRow({ r, selected, onlineIds, onClick }: {
             <span style={{ width: 5, height: 5, borderRadius: '50%', background: T.cyan }} />{r.matchScore ?? '—'}% MATCH
           </span>
           <div style={{ flex: 1 }} />
-          {/* Quick actions inline */}
           <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 30, height: 30, borderRadius: 8, background: 'rgba(255,255,255,0.05)', border: `1px solid ${T.lineStrong}` }}>
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={T.textDim} strokeWidth="2.6" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12" /></svg>
           </span>
@@ -173,29 +169,27 @@ function RequestRow({ r, selected, onlineIds, onClick }: {
   )
 }
 
-// ── ConvoRow — ligne conversation dans la liste gauche ────────────────────
-function ConvoRow({ conv, selected, onlineIds, onClick }: {
-  conv: Conversation; selected: boolean; onlineIds: Set<string>; onClick: () => void
+// ── ConvoRow ──────────────────────────────────────────────────────────────
+function ConvoRow({ conv, selected, onlineIds, unread, onClick }: {
+  conv: Conversation; selected: boolean; onlineIds: Set<string>; unread: number; onClick: () => void
 }) {
-  const name = conv.other.gameName ?? conv.other.displayName ?? '—'
-  const initials = name.slice(0, 2).toUpperCase()
-  const hue = nameHue(name)
+  const name   = conv.other.gameName ?? conv.other.displayName ?? '—'
+  const hue    = nameHue(name)
   const online = onlineIds.has(conv.other.id)
-  const unread = conv.lastMessage && conv.lastMessage.sender_id !== conv.other.id ? 0 : 0 // real unread would need last_read_at
   return (
     <button onClick={onClick} style={{ position: 'relative', display: 'flex', gap: 12, alignItems: 'center', width: '100%', textAlign: 'left', padding: '12px 14px', borderRadius: 13, cursor: 'pointer', background: selected ? `linear-gradient(100deg, ${T.cyan}18, transparent)` : 'transparent', border: `1px solid ${selected ? T.cyan + '44' : 'transparent'}` }}>
       {selected && <span style={{ position: 'absolute', left: -1, top: 13, bottom: 13, width: 3, borderRadius: 3, background: T.cyan, boxShadow: `0 0 8px ${T.cyan}` }} />}
-      <Avatar initials={initials} size={44} rank={conv.other.rankKey ?? 'iron'} hue={hue} online={online} />
+      <Avatar initials={name.slice(0,2).toUpperCase()} size={44} rank={conv.other.rankKey ?? 'iron'} hue={hue} online={online} />
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
           <span style={{ fontFamily: T.display, fontSize: 15, color: T.text, letterSpacing: '0.03em' }}>{name}</span>
           {conv.other.mainRole && <RoleIcon role={conv.other.mainRole} size={11} active />}
-          <span style={{ marginLeft: 'auto', fontFamily: T.mono, fontSize: 9.5, color: T.textMute }}>
+          <span style={{ marginLeft: 'auto', fontFamily: T.mono, fontSize: 9.5, color: unread > 0 ? T.cyan : T.textMute }}>
             {conv.lastMessage ? formatTime(conv.lastMessage.created_at) : ''}
           </span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 5 }}>
-          <span style={{ flex: 1, minWidth: 0, fontFamily: T.body, fontSize: 12.5, color: T.textDim, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+          <span style={{ flex: 1, minWidth: 0, fontFamily: T.body, fontSize: 12.5, color: unread > 0 ? T.text : T.textDim, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontWeight: unread > 0 ? 600 : 400 }}>
             {conv.lastMessage?.body ?? 'Conversation ouverte'}
           </span>
           {unread > 0 && <span style={{ minWidth: 18, height: 18, padding: '0 5px', borderRadius: 9, background: T.cyan, color: '#001018', fontFamily: T.mono, fontSize: 10, fontWeight: 800, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>{unread}</span>}
@@ -205,7 +199,7 @@ function ConvoRow({ conv, selected, onlineIds, onClick }: {
   )
 }
 
-// ── Bubble — message dans le thread ──────────────────────────────────────
+// ── Bubble ────────────────────────────────────────────────────────────────
 function Bubble({ m, isMe, otherInitials, otherHue, otherRankKey }: {
   m: Message; isMe: boolean; otherInitials: string; otherHue: number; otherRankKey: string
 }) {
@@ -214,6 +208,16 @@ function Bubble({ m, isMe, otherInitials, otherHue, otherRankKey }: {
       <div style={{ display: 'flex', justifyContent: 'center', margin: '6px 0' }}>
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '7px 14px', borderRadius: 999, background: `${T.live}14`, border: `1px solid ${T.live}40`, fontFamily: T.mono, fontSize: 10, color: T.live, letterSpacing: '0.14em' }}>
           <span style={{ width: 6, height: 6, borderRadius: '50%', background: T.live }} />
+          {m.body}
+        </span>
+      </div>
+    )
+  }
+  if (m.kind === 'lobby_invite') {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', margin: '6px 0' }}>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '7px 14px', borderRadius: 999, background: `${T.violet}14`, border: `1px solid ${T.violet}40`, fontFamily: T.mono, fontSize: 10, color: T.violet, letterSpacing: '0.14em' }}>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={T.violet} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
           {m.body}
         </span>
       </div>
@@ -238,18 +242,19 @@ function Bubble({ m, isMe, otherInitials, otherHue, otherRankKey }: {
   )
 }
 
-// ── ContextRail — panneau droit (commun à requests et convos) ─────────────
-function ContextRail({ name, initials, hue, rankKey, division, lp, matchScore, mainRole, lookingFor, champPool, online, pendingLabel }: {
+// ── ContextRail ───────────────────────────────────────────────────────────
+function ContextRail({ name, initials, hue, rankKey, division, lp, matchScore, mainRole, rightRole, champPool, online, pendingLabel }: {
   name: string; initials: string; hue: number; rankKey: string | null; division: string | null; lp: number | null
-  matchScore: number | null; mainRole: string | null; lookingFor: string | null
+  matchScore: number | null
+  mainRole: string | null
+  rightRole: string | null  // lookingFor (requests) or currentUser mainRole (convs)
   champPool: Record<string, string[]>; online: boolean; pendingLabel?: string
 }) {
-  const rc  = ROLE_META[(mainRole ?? 'FILL').toUpperCase()]?.c ?? T.textDim
-  const lrc = ROLE_META[(lookingFor ?? 'FILL').toUpperCase()]?.c ?? T.textDim
+  const rc  = ROLE_META[(mainRole  ?? 'FILL').toUpperCase()]?.c ?? T.textDim
+  const rrc = ROLE_META[(rightRole ?? 'FILL').toUpperCase()]?.c ?? T.textDim
   const firstPool = mainRole ? (champPool[mainRole.toUpperCase()] ?? Object.values(champPool)[0] ?? []) : Object.values(champPool)[0] ?? []
   return (
     <div style={{ width: 296, flexShrink: 0, height: '100%', overflowY: 'auto', padding: '22px 20px', borderLeft: `1px solid ${T.line}`, background: 'rgba(255,255,255,0.012)' }}>
-      {/* Hero */}
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', paddingBottom: 18, borderBottom: `1px solid ${T.line}` }}>
         <Avatar initials={initials} size={72} rank={rankKey ?? 'iron'} hue={hue} online={online} />
         <div style={{ fontFamily: T.display, fontSize: 22, color: T.text, letterSpacing: '0.03em', marginTop: 12 }}>{name}</div>
@@ -263,8 +268,7 @@ function ContextRail({ name, initials, hue, rankKey, division, lp, matchScore, m
         )}
       </div>
       <div style={{ paddingTop: 18 }}>
-        {/* Rôles */}
-        {(mainRole || lookingFor) && (
+        {(mainRole || rightRole) && (
           <ContextCard label="RÔLES">
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 12px', borderRadius: 9, background: `${rc}1a`, border: `1px solid ${rc}44`, flex: 1, justifyContent: 'center' }}>
@@ -272,14 +276,13 @@ function ContextRail({ name, initials, hue, rankKey, division, lp, matchScore, m
                 <span style={{ fontFamily: T.mono, fontSize: 11, color: rc, fontWeight: 700 }}>{mainRole ?? '—'}</span>
               </span>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={T.textMute} strokeWidth="2.5" strokeLinecap="round"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 12px', borderRadius: 9, background: `${lrc}14`, border: `1px solid ${lrc}33`, flex: 1, justifyContent: 'center' }}>
-                {lookingFor && <RoleIcon role={lookingFor} size={14} active />}
-                <span style={{ fontFamily: T.mono, fontSize: 11, color: lrc, fontWeight: 700 }}>{lookingFor ?? '—'}</span>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 12px', borderRadius: 9, background: `${rrc}14`, border: `1px solid ${rrc}33`, flex: 1, justifyContent: 'center' }}>
+                {rightRole && <RoleIcon role={rightRole} size={14} active />}
+                <span style={{ fontFamily: T.mono, fontSize: 11, color: rrc, fontWeight: 700 }}>{rightRole ?? '—'}</span>
               </span>
             </div>
           </ContextCard>
         )}
-        {/* Champion pool */}
         {firstPool.length > 0 && (
           <ContextCard label="TOP CHAMPIONS">
             <div style={{ display: 'flex', gap: 8 }}>
@@ -301,22 +304,29 @@ function ContextRail({ name, initials, hue, rankKey, division, lp, matchScore, m
 
 export default function InboxClient({
   userId,
+  currentUserRole,
+  currentUserName,
   pendingRequests: initialPending,
   conversations: initialConversations,
 }: {
   userId: string
+  currentUserRole: string | null
+  currentUserName: string
   pendingRequests: PendingRequest[]
   conversations: Conversation[]
 }) {
-  const supabase  = createClient()
-  const router    = useRouter()
-  const params    = useSearchParams()
+  const supabase = createClient()
+  const router   = useRouter()
+  const params   = useSearchParams()
   const { onlineIds } = usePresence(userId)
 
   const [pending,       setPending]       = useState(initialPending)
   const [conversations, setConversations] = useState(initialConversations)
+  const [unreadCounts,  setUnreadCounts]  = useState<Record<string, number>>(
+    Object.fromEntries(initialConversations.map(c => [c.conversationId, c.unreadCount]))
+  )
 
-  // Sélection : { type, id }
+  // Sélection
   const initialConvId = params.get('conv')
   const [selectedType, setSelectedType] = useState<'request' | 'conversation' | null>(
     initialConvId ? 'conversation' : (initialPending.length > 0 ? 'request' : (initialConversations.length > 0 ? 'conversation' : null))
@@ -325,19 +335,22 @@ export default function InboxClient({
     initialConvId ?? initialPending[0]?.id ?? initialConversations[0]?.conversationId ?? null
   )
 
-  // Chat
-  const [messages,      setMessages]      = useState<Message[]>([])
-  const [msgInput,      setMsgInput]      = useState('')
-  const [sending,       setSending]       = useState(false)
-  const [respondingId,  setRespondingId]  = useState<string | null>(null)
-  const messagesEndRef = useRef<HTMLDivElement>(null)
+  // Chat state
+  const [messages,     setMessages]     = useState<Message[]>([])
+  const [msgInput,     setMsgInput]     = useState('')
+  const [sending,      setSending]      = useState(false)
+  const [respondingId, setRespondingId] = useState<string | null>(null)
+  const [peerTyping,   setPeerTyping]   = useState(false)
+  const messagesEndRef  = useRef<HTMLDivElement>(null)
+  const typingChanRef   = useRef<ReturnType<typeof supabase.channel> | null>(null)
+  const peerTypingTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Derived
   const selectedRequest = pending.find(r => r.id === selectedId) ?? null
   const selectedConv    = conversations.find(c => c.conversationId === selectedId) ?? null
-  const convId = selectedType === 'conversation' ? selectedId : null
+  const convId          = selectedType === 'conversation' ? selectedId : null
 
-  // ── Charger + Realtime messages
+  // ── Messages Realtime ─────────────────────────────────────────────────
   const loadMessages = useCallback(async (cid: string) => {
     const { data } = await supabase
       .from('messages')
@@ -350,23 +363,77 @@ export default function InboxClient({
   useEffect(() => {
     if (!convId) { setMessages([]); return }
     loadMessages(convId)
-
-    const channel = supabase
+    const ch = supabase
       .channel(`messages:${convId}`)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `conversation_id=eq.${convId}` }, payload => {
         setMessages(prev => [...prev, payload.new as Message])
       })
       .subscribe()
-
-    return () => { supabase.removeChannel(channel) }
+    return () => { supabase.removeChannel(ch) }
   }, [convId, loadMessages]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Scroll to bottom on new messages
+  // Scroll to bottom
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
-  // ── Actions
+  // ── Mark-read quand on ouvre une conversation ─────────────────────────
+  useEffect(() => {
+    if (!convId) return
+    supabase
+      .from('conversation_members')
+      .update({ last_read_at: new Date().toISOString() })
+      .eq('conversation_id', convId)
+      .eq('profile_id', userId)
+      .then(() => setUnreadCounts(prev => ({ ...prev, [convId]: 0 })))
+  }, [convId]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Realtime : notifier l'émetteur quand sa demande est acceptée ──────
+  useEffect(() => {
+    const ch = supabase
+      .channel(`duo-requests:${userId}`)
+      .on('postgres_changes', {
+        event: 'UPDATE', schema: 'public', table: 'duo_requests',
+        filter: `from_profile=eq.${userId}`,
+      }, payload => {
+        const upd = payload.new as { id: string; status: string; conversation_id: string | null }
+        if (upd.status === 'accepted' && upd.conversation_id) {
+          setPending(prev => prev.filter(r => r.id !== upd.id))
+          router.refresh()
+          setSelectedType('conversation')
+          setSelectedId(upd.conversation_id)
+        }
+      })
+      .subscribe()
+    return () => { supabase.removeChannel(ch) }
+  }, [userId]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Typing Broadcast per-conv ─────────────────────────────────────────
+  useEffect(() => {
+    if (typingChanRef.current) {
+      supabase.removeChannel(typingChanRef.current)
+      typingChanRef.current = null
+    }
+    setPeerTyping(false)
+    if (!convId) return
+
+    const ch = supabase
+      .channel(`typing:${convId}`)
+      .on('broadcast', { event: 'typing' }, ({ payload }) => {
+        if (payload?.userId === userId) return
+        setPeerTyping(true)
+        if (peerTypingTimer.current) clearTimeout(peerTypingTimer.current)
+        peerTypingTimer.current = setTimeout(() => setPeerTyping(false), 3000)
+      })
+      .subscribe()
+    typingChanRef.current = ch
+  }, [convId]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  function broadcastTyping() {
+    typingChanRef.current?.send({ type: 'broadcast', event: 'typing', payload: { userId } })
+  }
+
+  // ── Actions ───────────────────────────────────────────────────────────
   async function handleRespond(requestId: string, action: 'accept' | 'decline') {
     setRespondingId(requestId)
     const res = await fetch('/api/duo/respond', {
@@ -383,8 +450,9 @@ export default function InboxClient({
         setSelectedType('conversation')
         setSelectedId(data.conversation_id)
       } else {
-        setSelectedId(pending.filter(r => r.id !== requestId)[0]?.id ?? conversations[0]?.conversationId ?? null)
-        setSelectedType(pending.filter(r => r.id !== requestId).length > 0 ? 'request' : 'conversation')
+        const remaining = pending.filter(r => r.id !== requestId)
+        setSelectedId(remaining[0]?.id ?? conversations[0]?.conversationId ?? null)
+        setSelectedType(remaining.length > 0 ? 'request' : 'conversation')
       }
     }
   }
@@ -402,6 +470,16 @@ export default function InboxClient({
     setSending(false)
   }
 
+  async function handleInviteToLobby() {
+    if (!convId) return
+    await supabase.from('messages').insert({
+      conversation_id: convId,
+      sender_id: userId,
+      body: `${currentUserName} a créé un lobby · RANKED SOLO/DUO`,
+      kind: 'lobby_invite',
+    })
+  }
+
   const pendingCount = pending.length
   const convCount    = conversations.length
   const eyebrow = [
@@ -414,9 +492,7 @@ export default function InboxClient({
       {/* Topbar */}
       <div style={{ flexShrink: 0, height: 76, boxSizing: 'border-box', display: 'flex', alignItems: 'center', gap: 24, padding: '0 28px', borderBottom: `1px solid ${T.line}`, background: 'rgba(10,12,20,0.6)', backdropFilter: 'blur(12px)' }}>
         <div>
-          <div style={{ fontFamily: T.mono, fontSize: 9.5, color: T.cyan, letterSpacing: '0.24em', marginBottom: 3 }}>
-            ◢ {eyebrow || 'INBOX VIDE'}
-          </div>
+          <div style={{ fontFamily: T.mono, fontSize: 9.5, color: T.cyan, letterSpacing: '0.24em', marginBottom: 3 }}>◢ {eyebrow || 'INBOX VIDE'}</div>
           <div style={{ fontFamily: T.display, fontSize: 24, color: T.text, letterSpacing: '0.02em', lineHeight: 1 }}>INBOX</div>
         </div>
       </div>
@@ -424,11 +500,9 @@ export default function InboxClient({
       {/* 3 panneaux */}
       <div style={{ flex: 1, minHeight: 0, display: 'flex', overflow: 'hidden' }}>
 
-        {/* ── Pane gauche : liste ────────────────────────────────────── */}
+        {/* ── Liste gauche ───────────────────────────────────────────── */}
         <div style={{ width: 348, flexShrink: 0, height: '100%', display: 'flex', flexDirection: 'column', borderRight: `1px solid ${T.line}`, background: 'rgba(255,255,255,0.012)' }}>
           <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '4px 12px 16px' }}>
-
-            {/* Section demandes */}
             {pending.length > 0 && (
               <>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 4px 10px' }}>
@@ -437,8 +511,7 @@ export default function InboxClient({
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {pending.map(r => (
-                    <RequestRow
-                      key={r.id} r={r} onlineIds={onlineIds}
+                    <RequestRow key={r.id} r={r} onlineIds={onlineIds}
                       selected={selectedType === 'request' && selectedId === r.id}
                       onClick={() => { setSelectedType('request'); setSelectedId(r.id) }}
                     />
@@ -446,8 +519,6 @@ export default function InboxClient({
                 </div>
               </>
             )}
-
-            {/* Section conversations */}
             {conversations.length > 0 && (
               <>
                 <div style={{ padding: `${pending.length > 0 ? 20 : 12}px 4px 10px` }}>
@@ -455,8 +526,8 @@ export default function InboxClient({
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                   {conversations.map(conv => (
-                    <ConvoRow
-                      key={conv.conversationId} conv={conv} onlineIds={onlineIds}
+                    <ConvoRow key={conv.conversationId} conv={conv} onlineIds={onlineIds}
+                      unread={unreadCounts[conv.conversationId] ?? 0}
                       selected={selectedType === 'conversation' && selectedId === conv.conversationId}
                       onClick={() => { setSelectedType('conversation'); setSelectedId(conv.conversationId) }}
                     />
@@ -464,7 +535,6 @@ export default function InboxClient({
                 </div>
               </>
             )}
-
             {pending.length === 0 && conversations.length === 0 && (
               <div style={{ padding: '40px 4px', textAlign: 'center' }}>
                 <div style={{ fontFamily: T.mono, fontSize: 10, color: T.textMute, letterSpacing: '0.18em' }}>INBOX VIDE</div>
@@ -483,8 +553,11 @@ export default function InboxClient({
         ) : selectedType === 'conversation' && selectedConv ? (
           <ChatPane
             conv={selectedConv} userId={userId} messages={messages} onlineIds={onlineIds}
-            msgInput={msgInput} sending={sending} messagesEndRef={messagesEndRef}
-            onInputChange={setMsgInput} onSend={handleSendMessage}
+            msgInput={msgInput} sending={sending} peerTyping={peerTyping}
+            messagesEndRef={messagesEndRef}
+            onInputChange={v => { setMsgInput(v); if (v) broadcastTyping() }}
+            onSend={handleSendMessage}
+            onInviteToLobby={handleInviteToLobby}
           />
         ) : (
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -503,7 +576,7 @@ export default function InboxClient({
             lp={selectedRequest.sender.lp}
             matchScore={selectedRequest.matchScore}
             mainRole={selectedRequest.sender.mainRole}
-            lookingFor={selectedRequest.sender.lookingFor}
+            rightRole={selectedRequest.sender.lookingFor}
             champPool={selectedRequest.sender.champPool}
             online={onlineIds.has(selectedRequest.sender.id)}
             pendingLabel="RIOT ID MASQUÉ · DEMANDE EN ATTENTE"
@@ -518,7 +591,7 @@ export default function InboxClient({
             lp={selectedConv.other.lp}
             matchScore={selectedConv.matchScore}
             mainRole={selectedConv.other.mainRole}
-            lookingFor={null}
+            rightRole={currentUserRole}
             champPool={selectedConv.other.champPool}
             online={onlineIds.has(selectedConv.other.id)}
           />
@@ -542,14 +615,12 @@ function RequestDetailPane({ r, onlineIds, respondingId, onAccept, onDecline }: 
   const rl      = rankLabel(r.sender.rankKey, r.sender.division)
   const rkColor = RANK_COLORS[rk] ?? '#9aa2bf'
   const wr      = r.sender.wins !== null && r.sender.losses !== null && (r.sender.wins + r.sender.losses) > 0
-    ? Math.round((r.sender.wins / (r.sender.wins + r.sender.losses)) * 100)
-    : null
+    ? Math.round((r.sender.wins / (r.sender.wins + r.sender.losses)) * 100) : null
   const poolCount = Object.values(r.sender.champPool).flat().length
-  const loading = respondingId === r.id
+  const loading   = respondingId === r.id
 
   return (
     <div style={{ flex: 1, minWidth: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
-      {/* Header */}
       <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 14, padding: '16px 24px', borderBottom: `1px solid ${T.line}`, background: 'rgba(10,12,20,0.5)' }}>
         <Avatar initials={init} size={44} rank={rk} hue={hue} online={online} />
         <div style={{ flex: 1, minWidth: 0 }}>
@@ -567,21 +638,16 @@ function RequestDetailPane({ r, onlineIds, respondingId, onAccept, onDecline }: 
         </div>
       </div>
 
-      {/* Corps */}
       <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '26px 24px', display: 'flex', flexDirection: 'column' }}>
         <div style={{ textAlign: 'center', fontFamily: T.mono, fontSize: 9.5, color: T.textMute, letterSpacing: '0.16em', margin: '0 0 18px' }}>
           {formatTime(r.createdAt).toUpperCase()}
         </div>
-
-        {/* Bandeau système */}
         <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 18 }}>
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '7px 14px', borderRadius: 999, background: `${T.cyan}14`, border: `1px solid ${T.cyan}40`, fontFamily: T.mono, fontSize: 10, color: T.cyan, letterSpacing: '0.14em' }}>
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={T.cyan} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
             {name.toUpperCase()} T&apos;A ENVOYÉ UNE DEMANDE DE DUO
           </span>
         </div>
-
-        {/* Message d'intro */}
         {r.message && (
           <div style={{ display: 'flex', gap: 11, marginBottom: 22, maxWidth: 560 }}>
             <Avatar initials={init} size={34} rank={rk} hue={hue} online={false} />
@@ -593,8 +659,6 @@ function RequestDetailPane({ r, onlineIds, respondingId, onAccept, onDecline }: 
             </div>
           </div>
         )}
-
-        {/* Carte décision */}
         <div style={{ maxWidth: 560, borderRadius: 18, padding: 22, background: `linear-gradient(135deg, ${T.cyan}10, ${T.violet}0c)`, border: `1px solid ${T.cyan}2e` }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
             <MatchRing value={r.matchScore ?? 0} size={70} stroke={5} accent={T.cyan} accent2={T.violet} />
@@ -621,14 +685,16 @@ function RequestDetailPane({ r, onlineIds, respondingId, onAccept, onDecline }: 
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={T.textDim} strokeWidth="2.6" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12" /></svg>Refuser
             </button>
             <button onClick={onAccept} disabled={loading} style={{ flex: 1.6, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '14px', borderRadius: 12, border: 'none', background: `linear-gradient(135deg, ${T.live}, ${T.cyan})`, color: '#001018', cursor: loading ? 'not-allowed' : 'pointer', fontFamily: T.display, fontSize: 13, letterSpacing: '0.08em', textTransform: 'uppercase' as const, fontWeight: 700, whiteSpace: 'nowrap', boxShadow: `0 14px 32px -12px ${T.live}`, opacity: loading ? 0.7 : 1 }}>
-              {loading ? <span style={{ width: 14, height: 14, borderRadius: '50%', border: '2px solid #001018', borderTopColor: 'transparent', animation: 'rgg-spin 0.7s linear infinite', display: 'inline-block' }} /> : <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#001018" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5" /></svg>}
+              {loading
+                ? <span style={{ width: 14, height: 14, borderRadius: '50%', border: '2px solid #001018', borderTopColor: 'transparent', animation: 'rgg-spin 0.7s linear infinite', display: 'inline-block' }} />
+                : <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#001018" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5" /></svg>
+              }
               Accepter le duo
             </button>
           </div>
         </div>
       </div>
 
-      {/* Composer bloqué */}
       <div style={{ flexShrink: 0, padding: '14px 24px 18px', borderTop: `1px solid ${T.line}` }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '14px 18px', borderRadius: 14, background: 'rgba(255,255,255,0.02)', border: `1px dashed ${T.lineStrong}` }}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={T.textMute} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M19 11H5a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2zM7 11V7a5 5 0 0 1 10 0v4" /></svg>
@@ -640,10 +706,13 @@ function RequestDetailPane({ r, onlineIds, respondingId, onAccept, onDecline }: 
 }
 
 // ── ChatPane ──────────────────────────────────────────────────────────────
-function ChatPane({ conv, userId, messages, onlineIds, msgInput, sending, messagesEndRef, onInputChange, onSend }: {
+function ChatPane({ conv, userId, messages, onlineIds, msgInput, sending, peerTyping, messagesEndRef, onInputChange, onSend, onInviteToLobby }: {
   conv: Conversation; userId: string; messages: Message[]; onlineIds: Set<string>
-  msgInput: string; sending: boolean; messagesEndRef: React.RefObject<HTMLDivElement>
-  onInputChange: (v: string) => void; onSend: () => void
+  msgInput: string; sending: boolean; peerTyping: boolean
+  messagesEndRef: React.RefObject<HTMLDivElement>
+  onInputChange: (v: string) => void
+  onSend: () => void
+  onInviteToLobby: () => void
 }) {
   const name    = conv.other.gameName ?? conv.other.displayName ?? '—'
   const init    = name.slice(0, 2).toUpperCase()
@@ -678,6 +747,11 @@ function ChatPane({ conv, userId, messages, onlineIds, msgInput, sending, messag
           </div>
           <div style={{ marginTop: 4 }}><StatusDot online={online} /></div>
         </div>
+        {/* Invite to lobby */}
+        <button onClick={onInviteToLobby} style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '9px 16px', borderRadius: 11, border: `1px solid ${T.violet}44`, background: `${T.violet}12`, color: T.violet, cursor: 'pointer', fontFamily: T.mono, fontSize: 10, letterSpacing: '0.1em', whiteSpace: 'nowrap' }}>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={T.violet} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+          INVITE TO LOBBY
+        </button>
       </div>
 
       {/* Messages */}
@@ -689,6 +763,17 @@ function ChatPane({ conv, userId, messages, onlineIds, msgInput, sending, messag
         {messages.map(m => (
           <Bubble key={m.id} m={m} isMe={m.sender_id === userId} otherInitials={init} otherHue={hue} otherRankKey={rk} />
         ))}
+        {/* Typing indicator */}
+        {peerTyping && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 2px' }}>
+            <Avatar initials={init} size={26} rank={rk} hue={hue} online={false} />
+            <span style={{ display: 'inline-flex', gap: 3, padding: '9px 13px', borderRadius: '14px 14px 14px 4px', background: 'rgba(255,255,255,0.05)', border: `1px solid ${T.line}` }}>
+              {[0,1,2].map(i => (
+                <span key={i} style={{ width: 6, height: 6, borderRadius: '50%', background: T.textDim, animation: `df-dot 1.4s ${i * 0.2}s infinite` }} />
+              ))}
+            </span>
+          </div>
+        )}
         <div ref={messagesEndRef} />
       </div>
 

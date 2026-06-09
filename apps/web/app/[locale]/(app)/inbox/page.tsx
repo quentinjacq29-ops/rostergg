@@ -22,7 +22,7 @@ export default async function InboxPage() {
     .eq('status', 'pending')
     .order('created_at', { ascending: false })
 
-  // 2. Conversations actives (duo_requests acceptées impliquant moi)
+  // 2. Conversations actives
   const { data: rawAccepted } = await supabase
     .from('duo_requests')
     .select(`
@@ -44,15 +44,40 @@ export default async function InboxPage() {
     .not('conversation_id', 'is', null)
     .order('created_at', { ascending: false })
 
-  // Dernier message par conversation
   const convIds = (rawAccepted ?? []).map(r => r.conversation_id).filter(Boolean) as string[]
-  const { data: lastMessages } = convIds.length > 0
-    ? await supabase
-        .from('messages')
-        .select('conversation_id, body, sender_id, created_at')
-        .in('conversation_id', convIds)
-        .order('created_at', { ascending: false })
-    : { data: [] }
+
+  // 3. Dernier message + unread par conversation (en parallèle)
+  const [{ data: lastMessages }, { data: memberRows }] = await Promise.all([
+    convIds.length > 0
+      ? supabase
+          .from('messages')
+          .select('conversation_id, body, sender_id, created_at')
+          .in('conversation_id', convIds)
+          .order('created_at', { ascending: false })
+      : Promise.resolve({ data: [] }),
+    convIds.length > 0
+      ? supabase
+          .from('conversation_members')
+          .select('conversation_id, last_read_at')
+          .eq('profile_id', user.id)
+          .in('conversation_id', convIds)
+      : Promise.resolve({ data: [] }),
+  ])
+
+  // Unread par conv : messages après last_read_at de l'utilisateur, envoyés par l'autre
+  const lastReadMap: Record<string, string | null> = {}
+  for (const row of memberRows ?? []) {
+    lastReadMap[row.conversation_id] = row.last_read_at ?? null
+  }
+
+  const unreadCountMap: Record<string, number> = {}
+  for (const msg of lastMessages ?? []) {
+    if (msg.sender_id === user.id) continue
+    const lastRead = lastReadMap[msg.conversation_id]
+    if (!lastRead || new Date(msg.created_at) > new Date(lastRead)) {
+      unreadCountMap[msg.conversation_id] = (unreadCountMap[msg.conversation_id] ?? 0) + 1
+    }
+  }
 
   const lastMsgMap: Record<string, { body: string; sender_id: string; created_at: string }> = {}
   for (const msg of lastMessages ?? []) {
@@ -61,19 +86,42 @@ export default async function InboxPage() {
     }
   }
 
-  // Normaliser riot_accounts / matching_prefs (objet simple, pas tableau — PK unique)
+  // 4. Profil current user (mainRole + displayName pour le rail et l'invite-to-lobby)
+  const { data: myPrefs } = await supabase
+    .from('matching_prefs')
+    .select('main_roles')
+    .eq('profile_id', user.id)
+    .maybeSingle()
+
+  const { data: myRiot } = await supabase
+    .from('riot_accounts')
+    .select('game_name')
+    .eq('profile_id', user.id)
+    .maybeSingle()
+
+  const { data: myProfile } = await supabase
+    .from('profiles')
+    .select('display_name')
+    .eq('id', user.id)
+    .single()
+
+  const currentUserRole = myPrefs?.main_roles?.[0] ?? null
+  const currentUserName = myRiot?.game_name ?? myProfile?.display_name ?? 'Moi'
+
+  // ── Helpers ──────────────────────────────────────────────────────────
+
   function normProfile(p: any) {
     if (!p) return null
-    const ra  = p.riot_accounts   // single object
-    const mp  = p.matching_prefs  // single object
+    const ra = p.riot_accounts
+    const mp = p.matching_prefs
     const soloRank = (ra?.ranks ?? []).find((r: any) => r.queue === 'RANKED_SOLO_5x5') ?? null
     return {
       id:          p.id ?? '',
       displayName: p.display_name ?? null,
       gameName:    ra?.game_name  ?? null,
       tagLine:     ra?.tag_line   ?? null,
-      mainRole:    mp?.main_roles?.[0]          ?? null,
-      lookingFor:  mp?.looking_for_roles?.[0]   ?? null,
+      mainRole:    mp?.main_roles?.[0]        ?? null,
+      lookingFor:  mp?.looking_for_roles?.[0] ?? null,
       rankKey:     soloRank?.tier?.toLowerCase() ?? null,
       division:    soloRank?.division            ?? null,
       lp:          soloRank?.league_points       ?? null,
@@ -93,13 +141,13 @@ export default async function InboxPage() {
 
   const conversations: Conversation[] = (rawAccepted ?? []).map((r: any) => {
     const isFromMe = r.from_profile === user.id
-    const raw      = isFromMe ? r.other_to : r.other_from
-    const other    = normProfile(raw)!
+    const other    = normProfile(isFromMe ? r.other_to : r.other_from)!
     const lastMsg  = r.conversation_id ? lastMsgMap[r.conversation_id] : null
     return {
       requestId:      r.id,
       conversationId: r.conversation_id as string,
       matchScore:     r.match_score,
+      unreadCount:    unreadCountMap[r.conversation_id] ?? 0,
       other,
       lastMessage: lastMsg ?? null,
     }
@@ -108,6 +156,8 @@ export default async function InboxPage() {
   return (
     <InboxClient
       userId={user.id}
+      currentUserRole={currentUserRole}
+      currentUserName={currentUserName}
       pendingRequests={pendingRequests}
       conversations={conversations}
     />
