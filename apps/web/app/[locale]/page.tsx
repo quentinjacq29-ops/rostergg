@@ -2,6 +2,9 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { Link } from '@/i18n/navigation'
 import LanguageSwitcher from '@/components/LanguageSwitcher'
+import Avatar from '@/components/ui/Avatar'
+import MatchRing from '@/components/ui/MatchRing'
+import RoleIcon from '@/components/ui/RoleIcon'
 
 type Props = { params: { locale: string } }
 
@@ -37,6 +40,9 @@ function LNav() {
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--cyan)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z" /><circle cx="12" cy="12" r="3" /></svg>
           Explorer sans compte
         </Link>
+        <Link href="/login" style={{ fontFamily: 'var(--font-body)', fontSize: 14, color: 'var(--text)', textDecoration: 'none', fontWeight: 500 }}>
+          Se connecter
+        </Link>
         <Link href="/onboarding/1" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '11px 22px', borderRadius: 11, background: 'linear-gradient(135deg, var(--cyan), var(--violet))', color: '#001018', fontFamily: 'var(--font-display)', fontSize: 13, letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 700, boxShadow: '0 10px 26px -10px var(--cyan)', textDecoration: 'none' }}>
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#001018" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6z" /></svg>
           Connexion Riot
@@ -69,28 +75,13 @@ function HeroVisual() {
           {/* Match ring + avatars */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 14, marginBottom: 18 }}>
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
-              <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'linear-gradient(135deg, var(--surface), var(--elevated))', border: '2px solid rgba(0,224,255,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font-display)', fontSize: 18, color: 'var(--cyan)', boxShadow: '0 0 20px rgba(0,224,255,0.2)' }}>VY</div>
-              <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--cyan)', letterSpacing: '0.1em' }}>MID</span>
+              <Avatar initials="VY" size={64} rank="diamond" hue={230} />
+              <RoleIcon role="MID" size={16} active />
             </div>
-            <div style={{ position: 'relative', width: 96, height: 96, flexShrink: 0 }}>
-              <svg width="96" height="96" viewBox="0 0 96 96">
-                <circle cx="48" cy="48" r="42" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="6" />
-                <circle cx="48" cy="48" r="42" fill="none" stroke="url(#matchGrad)" strokeWidth="6" strokeLinecap="round" strokeDasharray={`${0.94 * 2 * Math.PI * 42} ${2 * Math.PI * 42}`} strokeDashoffset={2 * Math.PI * 42 * 0.25} />
-                <defs>
-                  <linearGradient id="matchGrad" x1="0" y1="0" x2="1" y2="1">
-                    <stop offset="0%" stopColor="var(--cyan)" />
-                    <stop offset="100%" stopColor="var(--violet)" />
-                  </linearGradient>
-                </defs>
-              </svg>
-              <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                <span style={{ fontFamily: 'var(--font-display)', fontSize: 22, color: 'var(--text)', lineHeight: 1 }}>94</span>
-                <span style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--text-dim)', letterSpacing: '0.1em' }}>MATCH</span>
-              </div>
-            </div>
+            <MatchRing value={94} size={96} stroke={6} accent="#00e0ff" accent2="#8b5cf6" />
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
-              <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'linear-gradient(135deg, var(--surface), var(--elevated))', border: '2px solid rgba(139,92,246,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font-display)', fontSize: 18, color: 'var(--violet)', boxShadow: '0 0 20px rgba(139,92,246,0.2)' }}>KZ</div>
-              <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: '#3ddc97', letterSpacing: '0.1em' }}>JGL</span>
+              <Avatar initials="KZ" size={64} rank="diamond" hue={280} />
+              <RoleIcon role="JNG" size={16} active />
             </div>
           </div>
           {/* Compatibility bars */}
@@ -107,7 +98,8 @@ function HeroVisual() {
               </div>
             ))}
           </div>
-          <button style={{ width: '100%', marginTop: 18, padding: 13, borderRadius: 12, border: 'none', background: 'linear-gradient(135deg, var(--cyan), var(--violet))', color: '#001018', fontFamily: 'var(--font-display)', fontSize: 13, letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 700, cursor: 'pointer' }}>
+          <button style={{ width: '100%', marginTop: 18, padding: '13px', borderRadius: 12, border: 'none', background: 'linear-gradient(135deg, var(--cyan), var(--violet))', color: '#001018', fontFamily: 'var(--font-display)', fontSize: 13, letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#001018" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
             Envoyer une demande de duo
           </button>
         </div>
@@ -118,6 +110,7 @@ function HeroVisual() {
         <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--text)', letterSpacing: '0.08em' }}>94% MATCH</span>
       </div>
       <div style={{ position: 'absolute', bottom: 60, right: -40, padding: '8px 13px', borderRadius: 11, background: 'var(--surface)', border: '1px solid rgba(139,92,246,0.33)', boxShadow: '0 12px 30px -10px rgba(139,92,246,0.4)', display: 'flex', alignItems: 'center', gap: 7 }}>
+        <RoleIcon role="JNG" size={13} active />
         <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--text)', letterSpacing: '0.08em' }}>JUNGLE DISPO</span>
       </div>
     </div>
@@ -158,7 +151,9 @@ function LHero() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginTop: 30 }}>
             <div style={{ display: 'flex' }}>
               {[230, 280, 200, 320, 50].map((hue, i) => (
-                <div key={i} style={{ marginLeft: i ? -12 : 0, width: 34, height: 34, borderRadius: '50%', border: '2px solid var(--bg)', background: `hsl(${hue},60%,45%)`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font-display)', fontSize: 11, color: 'white', zIndex: 5 - i }} />
+                <div key={i} style={{ marginLeft: i ? -12 : 0 }}>
+                  <Avatar initials="" size={34} hue={hue} rank="diamond" online={false} />
+                </div>
               ))}
             </div>
             <span style={{ fontFamily: 'var(--font-body)', fontSize: 13.5, color: 'var(--text-dim)' }}>
@@ -168,6 +163,12 @@ function LHero() {
           <div style={{ marginTop: 16, display: 'inline-flex', alignItems: 'center', gap: 8, fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text-mute)', letterSpacing: '0.06em' }}>
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--live)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5" /></svg>
             Parcours duos, équipes et coachs librement — compte Riot requis seulement pour contacter.
+          </div>
+          <div style={{ marginTop: 18, fontFamily: 'var(--font-body)', fontSize: 14, color: 'var(--text-dim)' }}>
+            Déjà un compte ?{' '}
+            <Link href="/login" style={{ fontFamily: 'var(--font-display)', fontSize: 13, letterSpacing: '0.06em', color: 'var(--cyan)', textDecoration: 'none', textTransform: 'uppercase' }}>
+              Se connecter →
+            </Link>
           </div>
         </div>
         <HeroVisual />
@@ -180,7 +181,7 @@ function LPillars() {
   const pillars = [
     {
       accent: 'var(--cyan)', kicker: 'DUO', title: 'Trouve ton partenaire',
-      desc: 'Un feed classé par compatibilité : rôle complémentaire, même elo, horaires qui se recoupent. Demande, discute, lance.',
+      desc: 'Un feed classé par compatibilité : rôle complémentaire, même elo, horaires qui se recoupent. Swipe, demande, lance.',
       iconPath: <path d="M7 12l-3 3 3 3M17 12l3 3-3 3M14 4l-4 16" />,
     },
     {
@@ -189,7 +190,7 @@ function LPillars() {
       iconPath: <><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 00-3-3.87" /></>,
     },
     {
-      accent: 'var(--rose)', kicker: 'COACHING', title: 'Progresse en 1v1',
+      accent: 'var(--train-rose)', kicker: 'COACHING', title: 'Progresse en 1v1',
       desc: 'Des spécialistes Challenger de ton rôle et de tes matchups difficiles. VOD review, live coaching, plan perso.',
       iconPath: <><path d="M14.5 17.5L3 6V3h3l11.5 11.5" /><path d="M13 19l6-6M16 16l4 4" /></>,
     },
@@ -268,7 +269,7 @@ function LFinalCTA() {
 
 function LFooter() {
   const cols: [string, string[]][] = [
-    ['PRODUIT', ['Duo matching', 'Équipes', 'Coaching 1v1', 'Tarifs']],
+    ['PRODUIT', ['Duo matching', 'Équipes', 'Coaching 1v1', 'Comment ça marche']],
     ['RESSOURCES', ['Comment ça marche', 'Blog', 'Statut serveurs', 'Support']],
     ['LÉGAL', ['Confidentialité', 'CGU', 'Cookies', 'Mentions légales']],
   ]

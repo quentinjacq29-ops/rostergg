@@ -9,25 +9,26 @@ export default function LanguageSwitcher() {
   const router = useRouter()
   const pathname = usePathname()
 
-  function switchLocale(next: string) {
+  function switchLocale() {
+    const next = routing.locales.find(l => l !== locale) ?? 'fr'
     router.replace(pathname, { locale: next })
   }
 
   return (
-    <div className="flex items-center gap-1 rounded-lg border border-zinc-800 bg-zinc-900 p-1">
-      {routing.locales.map((l) => (
-        <button
-          key={l}
-          onClick={() => switchLocale(l)}
-          className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
-            l === locale
-              ? 'bg-zinc-700 text-white'
-              : 'text-zinc-500 hover:text-zinc-300'
-          }`}
-        >
-          {l.toUpperCase()}
-        </button>
-      ))}
-    </div>
+    <button
+      onClick={switchLocale}
+      style={{
+        display: 'inline-flex', alignItems: 'center', gap: 6,
+        fontFamily: 'var(--font-mono)', fontSize: 11,
+        color: 'var(--text-dim)', letterSpacing: '0.1em',
+        cursor: 'pointer', background: 'none', border: 'none', padding: 0,
+      }}
+    >
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-dim)" strokeWidth="2">
+        <circle cx="12" cy="12" r="10" />
+        <path d="M2 12h20M12 2a15 15 0 010 20M12 2a15 15 0 000 20" />
+      </svg>
+      {locale.toUpperCase()}
+    </button>
   )
 }

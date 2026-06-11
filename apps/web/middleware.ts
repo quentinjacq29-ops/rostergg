@@ -18,6 +18,9 @@ const PROTECTED = [
 // Routes inaccessible when already logged in
 const AUTH_ONLY = [/^\/[a-z]{2}\/login$/, /^\/[a-z]{2}\/signup$/]
 
+// Routes UAT — toujours publiques (gate gérée dans la page/route elle-même)
+const UAT_PUBLIC = [/^\/[a-z]{2}\/uat-login$/]
+
 function isProtected(p: string) {
   return PROTECTED.some((r) => r.test(p))
 }
@@ -61,8 +64,8 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  // 4. Guard: already logged in → skip auth pages
-  if (user && isAuthOnly(pathname)) {
+  // 4. Guard: already logged in → skip auth pages (but not UAT)
+  if (user && isAuthOnly(pathname) && !UAT_PUBLIC.some(r => r.test(pathname))) {
     return NextResponse.redirect(new URL(`/${locale}/duo`, request.url))
   }
 

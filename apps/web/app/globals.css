@@ -15,6 +15,9 @@
 *::-webkit-scrollbar-corner { background: transparent; }
 
 :root {
+  --font-display: 'Anton', Impact, sans-serif;
+  --font-body: 'Space Grotesk', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
   --void: #06070b;
   --bg: #0a0c14;
   --surface: #0f121c;
@@ -27,6 +30,7 @@
   --cyan: #00e0ff;
   --violet: #8b5cf6;
   --rose: #ff3d6e;
+  --train-rose: #ff3d6e;
   --live: #00ff9d;
   --gold: #ffd166;
 }

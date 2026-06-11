@@ -77,9 +77,14 @@ export default function DuoRequestModal({
 
   async function handleSend() {
     setLoading(true)
-    await onConfirm(message)
-    setLoading(false)
-    setState('sent')
+    try {
+      await onConfirm(message)
+      setState('sent')
+    } catch (err) {
+      console.error('[DuoRequestModal] send error:', err)
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (

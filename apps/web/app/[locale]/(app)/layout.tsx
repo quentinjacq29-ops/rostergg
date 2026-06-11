@@ -35,6 +35,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
     ])
     const soloRank = (ra as any)?.ranks?.find((r: any) => r.queue === 'RANKED_SOLO_5x5') ?? null
     shellUser = {
+      id:          user.id,
       displayName: profile?.display_name ?? null,
       gameName:    (ra as any)?.game_name ?? null,
       tagLine:     (ra as any)?.tag_line  ?? null,

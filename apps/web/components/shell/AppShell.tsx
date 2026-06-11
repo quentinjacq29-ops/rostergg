@@ -3,7 +3,9 @@
 // + bottom nav mobile
 import { Link } from '@/i18n/navigation'
 import { usePathname } from 'next/navigation'
+import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
+import { createClient } from '@/lib/supabase/client'
 
 const T = {
   bg: '#0a0c14', surface: '#0f121c', void: '#06070b',
@@ -41,6 +43,7 @@ const NAV = [
 ]
 
 type ShellUser = {
+  id?: string
   displayName: string | null
   gameName: string | null
   tagLine: string | null
@@ -62,9 +65,54 @@ export default function AppShell({
   const pathname = usePathname()
   const activeId = NAV.find(n => pathname.includes(n.href))?.id ?? 'duo'
 
-  const userName     = user?.gameName ?? user?.displayName ?? 'Joueur'
-  const initials     = userName.slice(0, 2).toUpperCase()
-  const rankColor    = RANKS[user?.rankKey ?? 'iron'] ?? '#9aa2bf'
+  const userName  = user?.gameName ?? user?.displayName ?? 'Joueur'
+  const initials  = userName.slice(0, 2).toUpperCase()
+  const rankColor = RANKS[user?.rankKey ?? 'iron'] ?? '#9aa2bf'
+
+  // Badge inbox temps réel — souscription Realtime sur duo_requests
+  const [badge, setBadge] = useState(inboxCount)
+  useEffect(() => { setBadge(inboxCount) }, [inboxCount])
+  useEffect(() => {
+    if (!user?.id) return
+    const supabase = createClient()
+    const channel = supabase
+      .channel(`inbox-badge:${user.id}`)
+      // Demande reçue → +1
+      .on('postgres_changes', {
+        event: 'INSERT', schema: 'public', table: 'duo_requests',
+        filter: `to_profile=eq.${user.id}`,
+      }, () => setBadge(n => n + 1))
+      // Demande reçue acceptée/refusée → -1
+      .on('postgres_changes', {
+        event: 'UPDATE', schema: 'public', table: 'duo_requests',
+        filter: `to_profile=eq.${user.id}`,
+      }, (payload: any) => {
+        if (payload.new?.status !== 'pending') setBadge(n => Math.max(0, n - 1))
+      })
+      // Demande envoyée acceptée → +1 (notif côté émetteur)
+      .on('postgres_changes', {
+        event: 'UPDATE', schema: 'public', table: 'duo_requests',
+        filter: `from_profile=eq.${user.id}`,
+      }, (payload: any) => {
+        if (payload.new?.status === 'accepted') setBadge(n => n + 1)
+      })
+      .subscribe()
+    return () => { supabase.removeChannel(channel) }
+  }, [user?.id])
+
+  // Mémorise le compte connecté pour le chip "compte récent" sur /login
+  useEffect(() => {
+    if (!user?.gameName) return
+    try {
+      localStorage.setItem('rgg_last_account', JSON.stringify({
+        gameName: user.gameName,
+        tagLine:  user.tagLine ?? '',
+        rankKey:  user.rankKey ?? null,
+        hue:      230,
+        lastSeen: Date.now(),
+      }))
+    } catch { /* localStorage inaccessible */ }
+  }, [user?.gameName])
 
   return (
     // DesktopShell : flex row, height 100vh, overflow hidden
@@ -143,14 +191,14 @@ export default function AppShell({
                   <span style={{ flex: 1, fontFamily: T.display, fontSize: 15, letterSpacing: '0.08em', color: on ? T.text : T.textDim }}>
                     {item.label.toUpperCase()}
                   </span>
-                  {item.id === 'inbox' && inboxCount > 0 ? (
+                  {item.id === 'inbox' && badge > 0 ? (
                     <span style={{
                       minWidth: 19, height: 19, padding: '0 5px', borderRadius: 10,
                       background: T.danger, color: '#fff',
                       fontFamily: T.mono, fontSize: 10, fontWeight: 800,
                       display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                       boxShadow: `0 0 8px ${T.danger}70`,
-                    }}>{inboxCount}</span>
+                    }}>{badge}</span>
                   ) : null}
                   {item.badge ? (
                     <span style={{
@@ -165,45 +213,50 @@ export default function AppShell({
           })}
         </nav>
 
-        <div style={{ flex: 1 }}/>
-
-        {/* User chip */}
+        {/* ── PERSONNEL — Mon profil (DMeNavItem, v12) */}
+        <div style={{ height: 1, background: T.line, margin: '16px 6px 0' }} />
+        <div style={{ fontFamily: T.mono, fontSize: 9, color: T.textMute, letterSpacing: '0.24em', padding: '14px 10px 10px' }}>
+          PERSONNEL
+        </div>
         <Link href="/me" style={{ textDecoration: 'none' }}>
           <div style={{
-            marginTop: 12, display: 'flex', alignItems: 'center', gap: 11, width: '100%',
-            padding: '10px 10px', borderRadius: 12, cursor: 'pointer',
-            background: 'rgba(255,255,255,0.025)', border: `1px solid ${T.line}`,
+            position: 'relative', width: '100%', display: 'flex', alignItems: 'center', gap: 12,
+            padding: '10px 12px', borderRadius: 12, cursor: 'pointer',
+            background: activeId === 'me'
+              ? `linear-gradient(100deg, ${T.cyan}2e, ${T.cyan}10)`
+              : `${T.cyan}0a`,
+            border: `1px solid ${activeId === 'me' ? T.cyan + '66' : T.cyan + '2e'}`,
+            boxShadow: activeId === 'me' ? `inset 0 0 22px ${T.cyan}1f` : 'none',
+            transition: 'background .15s, border-color .15s',
           }}>
-            {/* Avatar 36px */}
-            <div style={{ position: 'relative', width: 36, height: 36, flexShrink: 0 }}>
+            {activeId === 'me' && (
+              <span style={{ position: 'absolute', left: -1, top: 10, bottom: 10, width: 3, borderRadius: 3, background: T.cyan, boxShadow: `0 0 10px ${T.cyan}` }} />
+            )}
+            {/* Avatar avec ring de rang */}
+            <div style={{ position: 'relative', width: 32, height: 32, flexShrink: 0 }}>
               <div style={{
-                width: 36, height: 36, borderRadius: '50%',
+                width: 32, height: 32, borderRadius: '50%',
                 background: `linear-gradient(135deg, oklch(0.55 0.18 230), oklch(0.30 0.14 270))`,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontFamily: T.display, fontSize: 15, color: '#fff',
-                boxShadow: `0 0 0 2px ${rankColor}, 0 0 0 4px ${T.bg}, 0 0 12px ${rankColor}60`,
+                fontFamily: T.display, fontSize: 13, color: '#fff',
+                boxShadow: `0 0 0 2px ${rankColor}, 0 0 0 3px ${T.bg}`,
               }}>{initials}</div>
-              <div style={{
-                position: 'absolute', bottom: -1, right: -1, width: 10, height: 10,
-                borderRadius: '50%', background: T.live,
-                boxShadow: `0 0 0 2px ${T.bg}, 0 0 8px ${T.live}`,
-              }}/>
             </div>
-            <div style={{ flex: 1, minWidth: 0, lineHeight: 1.2 }}>
-              <div style={{ fontFamily: T.display, fontSize: 14, color: T.text, letterSpacing: '0.04em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {userName.toUpperCase()}
+            <div style={{ flex: 1, minWidth: 0, lineHeight: 1.25 }}>
+              <div style={{ fontFamily: T.display, fontSize: 14, letterSpacing: '0.08em', color: activeId === 'me' ? T.text : T.textDim, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                MON PROFIL
               </div>
-              {user?.rankLabel && (
-                <div style={{ fontFamily: T.mono, fontSize: 9, color: rankColor, letterSpacing: '0.1em' }}>
-                  {user.rankLabel}
-                </div>
-              )}
+              <div style={{ fontFamily: T.mono, fontSize: 8.5, color: T.cyan, letterSpacing: '0.14em', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {userName.toUpperCase()} · ÉDITER MA FICHE
+              </div>
             </div>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={T.textDim} strokeWidth="2" strokeLinecap="round">
-              <path d="M6 9l6 6 6-6"/>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={activeId === 'me' ? T.cyan : T.textDim} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M9 18l6-6-6-6" />
             </svg>
           </div>
         </Link>
+
+        <div style={{ flex: 1 }} />
       </aside>
 
       {/* ── Main */}

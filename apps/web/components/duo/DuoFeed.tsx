@@ -6,6 +6,7 @@ import { championIconUrl } from '@/lib/riot/assets'
 import MatchRing from '@/components/ui/MatchRing'
 import RoleIcon, { ROLE_META } from '@/components/ui/RoleIcon'
 import Avatar, { RANK_COLORS } from '@/components/ui/Avatar'
+import StatusDot from '@/components/ui/StatusDot'
 import DuoFilterPanel from '@/components/duo/DuoFilterPanel'
 import DuoRequestModal, { type DuoRequestTarget, type DuoRequestMe } from '@/components/duo/DuoRequestModal'
 import { usePresence } from '@/lib/hooks/usePresence'
@@ -30,6 +31,7 @@ type CandidateProfile = {
   id: string
   display_name: string | null
   avatar_url: string | null
+  bio: string | null
   riot_accounts: {
     id: string
     game_name: string
@@ -118,8 +120,8 @@ function DSynergy({ label, value, note, color }: {
 }
 
 // ── Pill ──────────────────────────────────────────────────────────────
-function Pill({ children, accent, mono = false, size = 'md' }: {
-  children: React.ReactNode; accent?: string; mono?: boolean; size?: 'sm' | 'md'
+function Pill({ children, accent, mono = false, dim = false, size = 'md' }: {
+  children: React.ReactNode; accent?: string; mono?: boolean; dim?: boolean; size?: 'sm' | 'md'
 }) {
   const padY = size === 'sm' ? 3 : 5
   const padX = size === 'sm' ? 8 : 10
@@ -130,7 +132,7 @@ function Pill({ children, accent, mono = false, size = 'md' }: {
       padding: `${padY}px ${padX}px`, borderRadius: 999,
       background: accent ? `${accent}1f` : 'rgba(255,255,255,0.04)',
       border: `1px solid ${accent ? accent + '40' : T.line}`,
-      color: accent ?? T.text,
+      color: accent ?? (dim ? T.textDim : T.text),
       fontFamily: mono ? T.mono : T.body,
       fontSize: fs, fontWeight: 600,
       letterSpacing: mono ? '0.08em' : '0.02em',
@@ -236,6 +238,7 @@ function DuoFeedRow({ item, selected, online, onClick }: {
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 7 }}>
           <Pill mono size="sm" accent={rankColor}>{tierLabel}</Pill>
           <span style={{ fontFamily: T.mono, fontSize: 9.5, color: T.textDim, letterSpacing: '0.08em' }}>{lp} LP</span>
+          <StatusDot state={online ? 'online' : 'offline'} />
           {item.is_degraded && (
             <span style={{ fontFamily: T.mono, fontSize: 9, color: T.textMute, letterSpacing: '0.08em', padding: '2px 6px', borderRadius: 4, background: 'rgba(255,255,255,0.04)', border: `1px solid ${T.line}` }}>HORS RÔLE</span>
           )}
@@ -349,11 +352,20 @@ function DuoDetailPane({ item, avail, champPool, masteryMap, online, requestInfo
           <div style={{ position: 'absolute', top: -28, left: -10, width: 220, height: 170, background: `radial-gradient(circle, ${T.cyan}33, transparent 70%)`, filter: 'blur(36px)', pointerEvents: 'none' }} />
           <Avatar initials={init} size={92} rank={rankKey} hue={hue} online={online} />
           <div style={{ flex: 1, minWidth: 0, position: 'relative' }}>
-            <a href="#" onClick={e => e.preventDefault()} title="Ouvre la fiche complète"
-              style={{ position: 'absolute', top: 0, right: 0, display: 'inline-flex', alignItems: 'center', gap: 8, padding: '11px 16px', borderRadius: 11, textDecoration: 'none', cursor: 'pointer', background: `${T.cyan}1c`, border: `1.5px solid ${T.cyan}`, color: T.cyan, boxShadow: `0 0 0 4px ${T.cyan}14`, fontFamily: T.mono, fontSize: 12, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-              Voir le profil complet
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={T.cyan} strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M7 17L17 7M9 7h8v8"/></svg>
-            </a>
+            {(() => {
+              const profileGameName = p?.riot_accounts?.game_name
+              const profileTagLine  = p?.riot_accounts?.tag_line
+              const profileHref = profileGameName && profileTagLine
+                ? `/u/${encodeURIComponent(profileGameName)}/${encodeURIComponent(profileTagLine)}`
+                : null
+              return profileHref ? (
+                <a href={profileHref} title="Voir la fiche complète"
+                  style={{ position: 'absolute', top: 0, right: 0, display: 'inline-flex', alignItems: 'center', gap: 8, padding: '11px 16px', borderRadius: 11, textDecoration: 'none', cursor: 'pointer', background: `${T.cyan}1c`, border: `1.5px solid ${T.cyan}`, color: T.cyan, boxShadow: `0 0 0 4px ${T.cyan}14`, fontFamily: T.mono, fontSize: 12, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+                  Voir le profil complet
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={T.cyan} strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M7 17L17 7M9 7h8v8"/></svg>
+                </a>
+              ) : null
+            })()}
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, paddingRight: 230 }}>
               <span style={{ fontFamily: T.display, fontSize: 34, color: T.text, letterSpacing: '0.02em', lineHeight: 1 }}>{name}</span>
               {tag && <span style={{ fontFamily: T.mono, fontSize: 12, color: T.textDim, letterSpacing: '0.1em' }}>{tag}</span>}
@@ -369,7 +381,9 @@ function DuoDetailPane({ item, avail, champPool, masteryMap, online, requestInfo
                 <RoleIcon role={looking} size={14} active />
                 <span style={{ fontFamily: T.mono, fontSize: 11, color: lookingMeta.c, letterSpacing: '0.1em', fontWeight: 700 }}>{lookingMeta.name}</span>
               </span>
+              <StatusDot state={online ? 'online' : 'offline'} />
             </div>
+            {p?.bio && <p style={{ margin: '16px 0 0', fontSize: 14.5, lineHeight: 1.6, color: T.textDim, maxWidth: 560 }}>&ldquo;{p.bio}&rdquo;</p>}
           </div>
         </div>
 
@@ -451,6 +465,8 @@ function DuoDetailPane({ item, avail, champPool, masteryMap, online, requestInfo
               <SectionLabel>PLAYSTYLE</SectionLabel>
               <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
                 {playstyles.map(s => <Pill key={s} mono accent={T.cyan}>{s}</Pill>)}
+                <Pill mono dim>RANKED</Pill>
+                {total > 0 && <Pill mono dim>{total} GAMES</Pill>}
               </div>
             </div>
           )}
@@ -606,7 +622,7 @@ export default function DuoFeed({
     const { data: rawProfiles } = await supabase
       .from('profiles')
       .select(`
-        id, display_name, avatar_url,
+        id, display_name, avatar_url, bio,
         riot_accounts(id, game_name, tag_line, profile_icon_id,
           ranks(tier, division, league_points, queue)),
         matching_prefs(main_roles, looking_for_roles, languages, playstyles, goals)
@@ -710,11 +726,15 @@ export default function DuoFeed({
         match_score: selectedItem?.score ?? null,
         message,
       }),
+      signal: AbortSignal.timeout(15000),
     })
     if (res.ok) {
       const data = await res.json()
       setDetailRequest({ id: data.id, status: 'pending', fromMe: true, conversationId: null })
       setShowModal(false)
+    } else {
+      const data = await res.json().catch(() => ({}))
+      throw new Error(data.error ?? `HTTP ${res.status}`)
     }
   }
 
