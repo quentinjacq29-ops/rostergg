@@ -366,7 +366,8 @@ export default function InboxClient({
     const ch = supabase
       .channel(`messages:${convId}`)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `conversation_id=eq.${convId}` }, payload => {
-        setMessages(prev => [...prev, payload.new as Message])
+        const msg = payload.new as Message
+        setMessages(prev => prev.some(m => m.id === msg.id) ? prev : [...prev, msg])
       })
       .subscribe()
     return () => { supabase.removeChannel(ch) }
@@ -460,42 +461,40 @@ export default function InboxClient({
   async function handleSendMessage() {
     if (!convId || !msgInput.trim() || sending) return
     setSending(true)
-    await supabase.from('messages').insert({
+    const body = msgInput.trim()
+    const { data, error } = await supabase.from('messages').insert({
       conversation_id: convId,
       sender_id: userId,
-      body: msgInput.trim(),
+      body,
       kind: 'text',
-    })
+    }).select('id, conversation_id, sender_id, body, kind, created_at').single()
+    if (error) {
+      console.error('[inbox] send error:', error.code, error.message)
+      setSending(false)
+      return
+    }
+    setMessages(prev => prev.some(m => m.id === data.id) ? prev : [...prev, data as Message])
     setMsgInput('')
     setSending(false)
   }
 
   async function handleInviteToLobby() {
     if (!convId) return
-    await supabase.from('messages').insert({
+    const { data, error } = await supabase.from('messages').insert({
       conversation_id: convId,
       sender_id: userId,
       body: `${currentUserName} a créé un lobby · RANKED SOLO/DUO`,
       kind: 'lobby_invite',
-    })
+    }).select('id, conversation_id, sender_id, body, kind, created_at').single()
+    if (error) { console.error('[inbox] lobby invite error:', error.code, error.message); return }
+    setMessages(prev => prev.some(m => m.id === data.id) ? prev : [...prev, data as Message])
   }
 
   const pendingCount = pending.length
   const convCount    = conversations.length
-  const eyebrow = [
-    pendingCount > 0 ? `${pendingCount} DEMANDE${pendingCount > 1 ? 'S' : ''} EN ATTENTE` : null,
-    convCount > 0    ? `${convCount} CONVERSATION${convCount > 1 ? 'S' : ''}` : null,
-  ].filter(Boolean).join(' · ')
 
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-      {/* Topbar */}
-      <div style={{ flexShrink: 0, height: 76, boxSizing: 'border-box', display: 'flex', alignItems: 'center', gap: 24, padding: '0 28px', borderBottom: `1px solid ${T.line}`, background: 'rgba(10,12,20,0.6)', backdropFilter: 'blur(12px)' }}>
-        <div>
-          <div style={{ fontFamily: T.mono, fontSize: 9.5, color: T.cyan, letterSpacing: '0.24em', marginBottom: 3 }}>◢ {eyebrow || 'INBOX VIDE'}</div>
-          <div style={{ fontFamily: T.display, fontSize: 24, color: T.text, letterSpacing: '0.02em', lineHeight: 1 }}>INBOX</div>
-        </div>
-      </div>
 
       {/* 3 panneaux */}
       <div style={{ flex: 1, minHeight: 0, display: 'flex', overflow: 'hidden' }}>

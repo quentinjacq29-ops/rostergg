@@ -53,7 +53,7 @@ export default function OnbStep7Availability({ locale, step, steps, onDone }: Pr
     fetch('/api/onboarding', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ step: 8, data: { availability: rows } }),
+      body: JSON.stringify({ step: 7, data: { availability: rows } }),
     }).catch(() => {})
     // Store availability for the saving page
     if (typeof window !== 'undefined') localStorage.setItem('onb_availability', JSON.stringify(rows))

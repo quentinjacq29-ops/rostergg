@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter } from '@/i18n/navigation'
-import { ONB_STEPS } from '@/lib/constants'
+import { ONB_STEPS_V2 } from '@/lib/constants'
 import type { ReactNode } from 'react'
 
 type Props = {
@@ -38,7 +38,7 @@ function RailDot({ n, label, state }: { n: number; label: string; state: 'done' 
 
 export default function OnbShell({ step, steps: stepsOverride, title, sub, children, onContinue, continueLabel = 'Continuer', continueDisabled, continueAccent = 'var(--cyan)', loading, locale }: Props) {
   const router = useRouter()
-  const displaySteps = stepsOverride ?? ONB_STEPS
+  const displaySteps = stepsOverride ?? ONB_STEPS_V2
   const total = displaySteps.length
 
   function handleBack() {
@@ -50,13 +50,13 @@ export default function OnbShell({ step, steps: stepsOverride, title, sub, child
   async function handleContinue() {
     if (onContinue) await onContinue()
     else {
-      if (step < 8) router.push(`/onboarding/${step + 1}` as `/onboarding/${number}`)
+      if (step < total) router.push(`/onboarding/${step + 1}` as `/onboarding/${number}`)
       else router.push('/duo')
     }
   }
 
   function handleSkip() {
-    if (step < 8) router.push(`/onboarding/${step + 1}` as `/onboarding/${number}`)
+    if (step < total) router.push(`/onboarding/${step + 1}` as `/onboarding/${number}`)
     else router.push('/duo')
   }
 

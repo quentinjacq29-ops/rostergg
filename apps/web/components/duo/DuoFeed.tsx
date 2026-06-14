@@ -67,7 +67,7 @@ type FeedRow = {
 type DuoItem = FeedRow & { profile: CandidateProfile | null }
 
 type Filters = {
-  role: string | null
+  role: string[] | null
   rankFloor: string | null
   rankCeiling: string | null
   voice: boolean | null
@@ -566,7 +566,7 @@ export default function DuoFeed({
   const { onlineIds, onlineCount } = usePresence(userId)
 
   const [filters, setFilters] = useState<Filters>({
-    role: initialPrefs?.looking_for_roles?.[0] ?? null,
+    role: initialPrefs?.looking_for_roles?.length ? initialPrefs.looking_for_roles : null,
     rankFloor: initialPrefs?.rank_floor ?? null,
     rankCeiling: null,
     voice: null,
@@ -586,13 +586,19 @@ export default function DuoFeed({
 
   // Active chips
   const chips: { id: string; label: string; role?: string }[] = []
-  if (filters.role)      chips.push({ id: 'role',      label: filters.role, role: filters.role })
+  if (filters.role?.length) filters.role.forEach(r => chips.push({ id: `role_${r}`, label: r, role: r }))
   if (filters.rankFloor) chips.push({ id: 'rankFloor', label: filters.rankFloor.toUpperCase() + '+' })
   if (filters.voice !== null) chips.push({ id: 'voice', label: filters.voice ? 'VOCAL' : 'NO VOICE' })
   if (filters.region)    chips.push({ id: 'region',    label: filters.region.toUpperCase() })
 
   const removeChip = (id: string) => {
-    if (id === 'role')      setFilters(f => ({ ...f, role: null }))
+    if (id.startsWith('role_')) {
+      const r = id.slice(5)
+      setFilters(f => {
+        const next = (f.role ?? []).filter(x => x !== r)
+        return { ...f, role: next.length ? next : null }
+      })
+    }
     if (id === 'rankFloor') setFilters(f => ({ ...f, rankFloor: null }))
     if (id === 'voice')     setFilters(f => ({ ...f, voice: null }))
     if (id === 'region')    setFilters(f => ({ ...f, region: null }))
@@ -607,7 +613,7 @@ export default function DuoFeed({
 
     const { data: feed, error } = await supabase.rpc('duo_feed', {
       p_user_id:      userId,
-      p_role_filter:  filters.role      ?? undefined,
+      p_role_filters: filters.role       ?? undefined,
       p_rank_floor:   filters.rankFloor ?? undefined,
       p_rank_ceiling: filters.rankCeiling ?? undefined,
       p_voice:        filters.voice     ?? undefined,
@@ -812,38 +818,6 @@ export default function DuoFeed({
           />
         )
       })()}
-
-      {/* DTopBar */}
-      <div style={{ flexShrink: 0, height: 76, boxSizing: 'border-box', display: 'flex', alignItems: 'center', gap: 24, padding: '0 28px', borderBottom: `1px solid ${T.line}`, background: 'rgba(10,12,20,0.6)', backdropFilter: 'blur(12px)' }}>
-        <div style={{ minWidth: 0 }}>
-          <div style={{ fontFamily: T.mono, fontSize: 9.5, color: T.cyan, letterSpacing: '0.24em', marginBottom: 3 }}>
-            ◢ COMPATIBILITY ENGINE · {onlineCount > 0 ? onlineCount : items.length} ONLINE
-          </div>
-          <div style={{ fontFamily: T.display, fontSize: 24, color: T.text, letterSpacing: '0.02em', lineHeight: 1, whiteSpace: 'nowrap' }}>
-            YOUR TOP DUOS
-          </div>
-        </div>
-        <div style={{ flex: 1, maxWidth: 460 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, height: 42, padding: '0 14px', borderRadius: 11, background: 'rgba(255,255,255,0.04)', border: `1px solid ${T.line}` }}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={T.textDim} strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg>
-            <span style={{ flex: 1, fontFamily: T.body, fontSize: 13.5, color: T.textMute }}>Search players, teams, champions…</span>
-            <span style={{ display: 'flex', gap: 4 }}>
-              {['⌘','K'].map(k => (
-                <kbd key={k} style={{ fontFamily: T.mono, fontSize: 10, color: T.textDim, padding: '2px 6px', borderRadius: 5, background: 'rgba(255,255,255,0.05)', border: `1px solid ${T.line}` }}>{k}</kbd>
-              ))}
-            </span>
-          </div>
-        </div>
-        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 12 }}>
-          <button style={{ position: 'relative', width: 42, height: 42, borderRadius: 11, cursor: 'pointer', background: 'rgba(255,255,255,0.04)', border: `1px solid ${T.line}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke={T.text} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 8a6 6 0 1112 0c0 7 3 7 3 9H3c0-2 3-2 3-9zM10 21a2 2 0 004 0"/></svg>
-            <span style={{ position: 'absolute', top: 9, right: 10, width: 7, height: 7, borderRadius: '50%', background: danger, boxShadow: `0 0 6px ${danger}`, border: `1.5px solid ${T.bg}` }}/>
-          </button>
-          <button style={{ width: 42, height: 42, borderRadius: 11, cursor: 'pointer', background: 'rgba(255,255,255,0.04)', border: `1px solid ${T.line}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke={T.text} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
-          </button>
-        </div>
-      </div>
 
       {/* Content area (feed + detail) */}
       <div style={{ flex: 1, minHeight: 0, display: 'flex', overflow: 'hidden', position: 'relative' }}>

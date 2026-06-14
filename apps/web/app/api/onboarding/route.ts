@@ -7,14 +7,16 @@ type OnboardingBody = {
   data: Record<string, unknown>
 }
 
-// Mapping UI step → API action (numéros envoyés par les composants OnbStep*.tsx) :
-//   step 2  → intent (pas de write DB, on crée juste la ligne matching_prefs)
+// Mapping UI step → API action (parcours DUO v2, 7 étapes) :
+//   step 1  → displayName (pseudo public)
+//   step 2  → intent (pas de write DB, crée la ligne matching_prefs)
 //   step 3  → languages
-//   step 4  → main_role + secondary_role  → main_roles[]
+//   step 4  → main_role + secondary_role → main_roles[]
 //   step 5  → looking_for_roles[]
 //   step 6  → champion_pool { [role]: string[] }
-//   step 7  → playstyles[] + goals[]
-//   step 8  → availability rows
+//   step 7  → availability rows
+//
+// SUPPRIMÉ v2 : step 7 (playstyles/goals) — déplacé vers édition de profil (me.jsx)
 
 export async function POST(request: NextRequest) {
   const cookieStore = await cookies()
@@ -41,9 +43,15 @@ export async function POST(request: NextRequest) {
 
   try {
     switch (step) {
+      case 1: {
+        // Pseudo public (displayName) — choisi en fin d'étape 1 après liaison Riot
+        const { displayName } = data as { displayName: string }
+        if (!displayName?.trim()) break
+        await supabase.from('profiles').update({ display_name: displayName.trim() }).eq('id', user.id)
+        break
+      }
       case 2: {
-        // Intent (duo | team | coaching) — pas de colonne dédiée, juste s'assurer
-        // que la ligne matching_prefs existe pour les upserts suivants.
+        // Intent (duo | team | coaching) — s'assurer que la ligne matching_prefs existe
         await supabase.from('matching_prefs').upsert(
           { profile_id: user.id },
           { onConflict: 'profile_id', ignoreDuplicates: true }
@@ -59,7 +67,6 @@ export async function POST(request: NextRequest) {
         break
       }
       case 4: {
-        // main_role obligatoire + secondary_role optionnel → stockés dans main_roles[]
         const { main_role, secondary_role } = data as { main_role: string; secondary_role: string | null }
         const main_roles = ([main_role, secondary_role]).filter(Boolean) as string[]
         await supabase.from('matching_prefs').upsert(
@@ -77,7 +84,6 @@ export async function POST(request: NextRequest) {
         break
       }
       case 6: {
-        // Pool de champions par rôle : { MID: ['Ahri', 'Zed'], JNG: ['Kayn'] }
         const { champion_pool } = data as { champion_pool: Record<string, string[]> }
         await supabase.from('matching_prefs').upsert(
           { profile_id: user.id, champion_pool: champion_pool ?? {} },
@@ -86,14 +92,6 @@ export async function POST(request: NextRequest) {
         break
       }
       case 7: {
-        const { playstyles, goals } = data as { playstyles: string[]; goals: string[] }
-        await supabase.from('matching_prefs').upsert(
-          { profile_id: user.id, playstyles, goals },
-          { onConflict: 'profile_id' }
-        )
-        break
-      }
-      case 8: {
         const { availability } = data as { availability: Array<{ weekday: number; slot: number; intensity: number }> }
         await supabase.from('availability').delete().eq('profile_id', user.id)
         if (availability.length > 0) {

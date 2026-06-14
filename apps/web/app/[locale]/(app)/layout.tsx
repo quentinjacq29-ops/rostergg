@@ -2,8 +2,6 @@ import { createClient } from '@/lib/supabase/server'
 import AppShell from '@/components/shell/AppShell'
 import type { ReactNode } from 'react'
 
-const TIER_ORDER = ['IRON','BRONZE','SILVER','GOLD','PLATINUM','EMERALD','DIAMOND','MASTER','GRANDMASTER','CHALLENGER']
-
 function rankLabel(tier: string | null, division: string | null, lp: number | null): string {
   if (!tier) return ''
   const t = tier.toUpperCase()
@@ -13,25 +11,25 @@ function rankLabel(tier: string | null, division: string | null, lp: number | nu
     : `${t} ${division ?? ''} · ${lp ?? 0} LP`.trim()
 }
 
-export default async function AppLayout({ children }: { children: ReactNode }) {
+type LayoutProps = { children: ReactNode; params: { locale: string } }
+
+export default async function AppLayout({ children, params: { locale } }: LayoutProps) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
   let shellUser = null
-  let inboxCount = 0
+  let pendingCount   = 0
+  let unreadMsgCount = 0
+
   if (user) {
-    const [{ data: profile }, { data: ra }, { count }] = await Promise.all([
+    const [{ data: profile }, { data: ra }, { data: badge }] = await Promise.all([
       supabase.from('profiles').select('display_name, avatar_url').eq('id', user.id).maybeSingle(),
       supabase
         .from('riot_accounts')
         .select('game_name, tag_line, ranks(tier, division, league_points, queue)')
         .eq('profile_id', user.id)
         .maybeSingle(),
-      supabase
-        .from('duo_requests')
-        .select('id', { count: 'exact', head: true })
-        .eq('to_profile', user.id)
-        .eq('status', 'pending'),
+      supabase.rpc('inbox_badge', { p_user_id: user.id }),
     ])
     const soloRank = (ra as any)?.ranks?.find((r: any) => r.queue === 'RANKED_SOLO_5x5') ?? null
     shellUser = {
@@ -43,8 +41,13 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
       rankKey:     soloRank?.tier?.toLowerCase() ?? null,
       rankLabel:   rankLabel(soloRank?.tier, soloRank?.division, soloRank?.league_points),
     }
-    inboxCount = count ?? 0
+    pendingCount   = (badge as any)?.pending_requests  ?? 0
+    unreadMsgCount = (badge as any)?.unread_conv_count  ?? 0
   }
 
-  return <AppShell user={shellUser} inboxCount={inboxCount}>{children}</AppShell>
+  return (
+    <AppShell user={shellUser} pendingCount={pendingCount} unreadMsgCount={unreadMsgCount} locale={locale}>
+      {children}
+    </AppShell>
+  )
 }

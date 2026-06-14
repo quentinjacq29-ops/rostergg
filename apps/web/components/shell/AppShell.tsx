@@ -3,9 +3,10 @@
 // + bottom nav mobile
 import { Link } from '@/i18n/navigation'
 import { usePathname } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import DTopBar from '@/components/layout/DTopBar'
 
 const T = {
   bg: '#0a0c14', surface: '#0f121c', void: '#06070b',
@@ -53,48 +54,90 @@ type ShellUser = {
   rankHue?: number
 }
 
+type TopbarConfig = { eyebrow: string; title: string; accent: string }
+
+function topbarConfig(pathname: string): TopbarConfig | null {
+  // Profile pages handle their own DTopBar (target prop for MoreMenu)
+  if (pathname.includes('/u/')) return null
+  if (pathname.includes('/duo'))      return { eyebrow: 'COMPATIBILITY ENGINE', title: 'YOUR TOP DUOS', accent: T.cyan }
+  if (pathname.includes('/teams'))    return { eyebrow: 'ÉQUIPES',              title: 'TEAMS',          accent: T.violet }
+  if (pathname.includes('/training')) return { eyebrow: 'ENTRAÎNEMENT',         title: 'TRAINING',       accent: T.danger }
+  if (pathname.includes('/inbox'))    return { eyebrow: 'MESSAGES & DEMANDES',  title: 'INBOX',          accent: T.cyan }
+  if (pathname.includes('/me'))       return { eyebrow: 'MON PROFIL · ÉDITION', title: 'MON PROFIL',     accent: T.cyan }
+  if (pathname.includes('/settings')) return { eyebrow: 'PARAMÈTRES',           title: 'RÉGLAGES',       accent: T.violet }
+  return null
+}
+
 export default function AppShell({
   children,
   user,
-  inboxCount = 0,
+  locale = 'fr',
+  pendingCount = 0,
+  unreadMsgCount = 0,
 }: {
   children: ReactNode
   user: ShellUser | null
-  inboxCount?: number
+  locale?: string
+  pendingCount?: number
+  unreadMsgCount?: number
 }) {
   const pathname = usePathname()
-  const activeId = NAV.find(n => pathname.includes(n.href))?.id ?? 'duo'
+  const activeId = pathname.includes('/me') ? 'me' : (NAV.find(n => pathname.includes(n.href))?.id ?? 'duo')
+  const tbConfig = topbarConfig(pathname)
 
   const userName  = user?.gameName ?? user?.displayName ?? 'Joueur'
   const initials  = userName.slice(0, 2).toUpperCase()
   const rankColor = RANKS[user?.rankKey ?? 'iron'] ?? '#9aa2bf'
 
-  // Badge inbox temps réel — souscription Realtime sur duo_requests
-  const [badge, setBadge] = useState(inboxCount)
-  useEffect(() => { setBadge(inboxCount) }, [inboxCount])
+  // Badge = pending duo requests + convs avec messages non-lus (deux compteurs séparés)
+  const [pendingBadge, setPendingBadge] = useState(pendingCount)
+  const [msgBadge,     setMsgBadge]     = useState(unreadMsgCount)
+  useEffect(() => { setPendingBadge(pendingCount) },    [pendingCount])
+  useEffect(() => { setMsgBadge(unreadMsgCount) },      [unreadMsgCount])
+  const badge = pendingBadge + msgBadge
+
+  // Quand l'user arrive sur /inbox, InboxClient marque tout lu → reset la partie messages
+  useEffect(() => {
+    if (pathname.includes('/inbox')) setMsgBadge(0)
+  }, [pathname])
+
+  // Ref pour lire pathname courant depuis callbacks Realtime (pas de re-subscribe)
+  const pathnameRef = useRef(pathname)
+  useEffect(() => { pathnameRef.current = pathname }, [pathname])
+
   useEffect(() => {
     if (!user?.id) return
     const supabase = createClient()
     const channel = supabase
       .channel(`inbox-badge:${user.id}`)
-      // Demande reçue → +1
+      // Demande reçue → +1 pending
       .on('postgres_changes', {
         event: 'INSERT', schema: 'public', table: 'duo_requests',
         filter: `to_profile=eq.${user.id}`,
-      }, () => setBadge(n => n + 1))
-      // Demande reçue acceptée/refusée → -1
+      }, () => setPendingBadge(n => n + 1))
+      // Demande traitée → -1 pending
       .on('postgres_changes', {
         event: 'UPDATE', schema: 'public', table: 'duo_requests',
         filter: `to_profile=eq.${user.id}`,
       }, (payload: any) => {
-        if (payload.new?.status !== 'pending') setBadge(n => Math.max(0, n - 1))
+        if (payload.new?.status !== 'pending') setPendingBadge(n => Math.max(0, n - 1))
       })
-      // Demande envoyée acceptée → +1 (notif côté émetteur)
+      // Demande envoyée acceptée → +1 pending (notif émetteur)
       .on('postgres_changes', {
         event: 'UPDATE', schema: 'public', table: 'duo_requests',
         filter: `from_profile=eq.${user.id}`,
       }, (payload: any) => {
-        if (payload.new?.status === 'accepted') setBadge(n => n + 1)
+        if (payload.new?.status === 'accepted') setPendingBadge(n => n + 1)
+      })
+      // Nouveau message d'un autre user — RLS garantit que seuls les messages
+      // des convs de l'user arrivent ici (messages_select_member policy)
+      .on('postgres_changes', {
+        event: 'INSERT', schema: 'public', table: 'messages',
+      }, (payload: any) => {
+        const msg = payload.new
+        if (!msg || msg.sender_id === user.id) return
+        if (pathnameRef.current.includes('/inbox')) return
+        setMsgBadge(n => n + 1)
       })
       .subscribe()
     return () => { supabase.removeChannel(channel) }
@@ -261,6 +304,14 @@ export default function AppShell({
 
       {/* ── Main */}
       <main className="rgg-main" style={{ flex: 1, minWidth: 0, height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        {tbConfig && (
+          <DTopBar
+            eyebrow={tbConfig.eyebrow}
+            title={tbConfig.title}
+            accent={tbConfig.accent}
+            locale={locale}
+          />
+        )}
         {children}
       </main>
 

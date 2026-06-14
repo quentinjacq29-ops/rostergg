@@ -3,6 +3,7 @@ import { useState, useRef, useCallback } from 'react'
 import Avatar, { RANK_COLORS } from '@/components/ui/Avatar'
 import RoleIcon, { ROLE_META } from '@/components/ui/RoleIcon'
 import { championIconUrl, profileIconUrl } from '@/lib/riot/assets'
+import { CHAMPIONS_STATIC } from '@/lib/champions-data'
 
 const T = {
   bg: '#0a0c14', surface: '#0f121c', surface2: '#161927',
@@ -17,6 +18,7 @@ const ALL_STYLES = ['Tryhard', 'Roaming', 'Vocal', 'Scaling', 'Aggro', 'Chill', 
 const ALL_LANGS  = ['fr', 'en', 'es', 'de']
 const LANG_LABEL: Record<string, string> = { fr: 'FR', en: 'EN', es: 'ES', de: 'DE' }
 const LANG_FLAG:  Record<string, string> = { fr: '🇫🇷', en: '🇬🇧', es: '🇪🇸', de: '🇩🇪' }
+const LANG_COLOR: Record<string, string> = { fr: '#5b8def', en: '#e85a5a', es: '#ffb547', de: '#3ddc97' }
 const DAYS  = ['LUN', 'MAR', 'MER', 'JEU', 'VEN', 'SAM', 'DIM']
 const SLOTS = ['18h', '20h', '22h', '00h', '02h', '04h']
 const BIO_MAX = 200
@@ -40,7 +42,7 @@ export type MeClientProps = {
   languages: string[]
   voiceRequired: boolean
   availability: AvailSlot[]
-  champPool: string[]
+  champPool: Record<string, string[]>
   lastSyncedAt: string | null
   profileIconId: number | null
 }
@@ -55,6 +57,16 @@ function Pill({ children, accent }: { children: React.ReactNode; accent?: string
   )
 }
 
+function LangChip({ code, primary = false }: { code: string; primary?: boolean }) {
+  const c = LANG_COLOR[code] ?? T.textDim
+  return (
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '3px 8px', borderRadius: 6, background: primary ? `${c}22` : 'rgba(255,255,255,0.04)', border: `1px solid ${primary ? c + '66' : T.line}`, fontFamily: T.mono, fontSize: 10, fontWeight: 700, color: primary ? c : T.text, letterSpacing: '0.1em' }}>
+      <span style={{ width: 4, height: 4, borderRadius: '50%', background: c, boxShadow: primary ? `0 0 4px ${c}` : 'none' }} />
+      {LANG_FLAG[code]} {LANG_LABEL[code]}
+    </span>
+  )
+}
+
 function FieldLabel({ children, hint }: { children: React.ReactNode; hint?: string }) {
   return (
     <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 11 }}>
@@ -64,10 +76,13 @@ function FieldLabel({ children, hint }: { children: React.ReactNode; hint?: stri
   )
 }
 
-function EditCard({ children, accent = T.cyan, label }: { children: React.ReactNode; accent?: string; label: string }) {
+function EditCard({ children, accent = T.cyan, label, hint }: { children: React.ReactNode; accent?: string; label: string; hint?: string }) {
   return (
     <div style={{ borderRadius: 16, padding: 22, background: 'rgba(255,255,255,0.022)', border: `1px solid ${T.line}`, marginBottom: 18 }}>
-      <div style={{ fontFamily: T.mono, fontSize: 10, color: accent, letterSpacing: '0.22em', marginBottom: 18 }}>◢ {label}</div>
+      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 18 }}>
+        <div style={{ fontFamily: T.mono, fontSize: 10, color: accent, letterSpacing: '0.22em' }}>◢ {label}</div>
+        {hint && <div style={{ fontFamily: T.mono, fontSize: 9.5, color: T.textMute, letterSpacing: '0.06em' }}>{hint}</div>}
+      </div>
       {children}
     </div>
   )
@@ -88,6 +103,80 @@ function Toggle({ on, onClick }: { on: boolean; onClick: () => void }) {
     <span onClick={onClick} style={{ width: 44, height: 26, borderRadius: 999, padding: 3, background: on ? T.cyan : 'rgba(255,255,255,0.1)', display: 'inline-flex', alignItems: 'center', cursor: 'pointer', transition: 'background .15s', boxShadow: on ? `0 0 12px ${T.cyan}66` : 'none', flexShrink: 0 }}>
       <span style={{ width: 20, height: 20, borderRadius: '50%', background: on ? '#001018' : T.textDim, marginLeft: on ? 18 : 0, transition: 'margin .15s' }} />
     </span>
+  )
+}
+
+// ── Éditeur champion pool pour un rôle ───────────────────────────────────────
+
+function RolePoolEditor({ role, label, pool, onToggle, onPromote }: {
+  role: string
+  label: string
+  pool: string[]
+  onToggle: (role: string, champ: string) => void
+  onPromote: (role: string, champ: string) => void
+}) {
+  const rc = ROLE_META[role]?.c ?? T.cyan
+  const [open, setOpen] = useState(false)
+  const available = CHAMPIONS_STATIC.filter(c => !pool.includes(c.id))
+
+  return (
+    <div style={{ borderRadius: 14, padding: 16, background: `linear-gradient(135deg, ${rc}10, transparent 72%)`, border: `1px solid ${rc}33`, marginBottom: 14 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+        <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 30, height: 30, borderRadius: 9, background: `${rc}1c`, border: `1px solid ${rc}55` }}>
+          <RoleIcon role={role} size={16} active />
+        </span>
+        <span style={{ fontFamily: T.display, fontSize: 16, color: T.text, letterSpacing: '0.03em' }}>{ROLE_META[role]?.name ?? role}</span>
+        <span style={{ fontFamily: T.mono, fontSize: 8, color: rc, letterSpacing: '0.14em', padding: '3px 7px', borderRadius: 5, background: `${rc}18`, border: `1px solid ${rc}40` }}>{label}</span>
+        <div style={{ flex: 1 }} />
+        <span style={{ fontFamily: T.mono, fontSize: 9.5, color: T.textMute, letterSpacing: '0.1em' }}>{pool.length} CHAMPS</span>
+      </div>
+
+      {/* Champions sélectionnés */}
+      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'flex-start' }}>
+        {pool.map((ch, i) => (
+          <div key={ch} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}>
+            <div onClick={() => onToggle(role, ch)} title={`${ch} — cliquer pour retirer`} style={{ position: 'relative', cursor: 'pointer' }}>
+              <div style={{ width: 52, height: 52, borderRadius: 10, overflow: 'hidden', border: `2px solid ${i === 0 ? rc : 'rgba(255,255,255,0.15)'}`, boxShadow: i === 0 ? `0 0 12px ${rc}66` : 'none' }}>
+                <img src={championIconUrl(ch)} alt={ch} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              </div>
+              <span style={{ position: 'absolute', top: -5, right: -5, width: 17, height: 17, borderRadius: '50%', background: T.danger, border: `1.5px solid ${T.bg}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3.5" strokeLinecap="round"><path d="M6 6l12 12M18 6L6 18" /></svg>
+              </span>
+            </div>
+            {i === 0
+              ? <span style={{ fontFamily: T.mono, fontSize: 7.5, color: rc, letterSpacing: '0.1em' }}>OTP</span>
+              : <span onClick={() => onPromote(role, ch)} style={{ fontFamily: T.mono, fontSize: 7.5, color: T.textMute, letterSpacing: '0.06em', cursor: 'pointer' }}>★ OTP</span>
+            }
+          </div>
+        ))}
+        {!pool.length && (
+          <span style={{ fontFamily: T.mono, fontSize: 10, color: T.textMute, padding: '14px 0' }}>Aucun champion — ajoutes-en ci-dessous.</span>
+        )}
+      </div>
+
+      {/* Bouton ouvrir catalogue */}
+      <button onClick={() => setOpen(o => !o)} style={{ marginTop: 13, display: 'inline-flex', alignItems: 'center', gap: 7, padding: '7px 13px', borderRadius: 9, background: `${rc}14`, border: `1px solid ${rc}44`, color: rc, fontFamily: T.mono, fontSize: 10, letterSpacing: '0.08em', cursor: 'pointer' }}>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={rc} strokeWidth="2.6" strokeLinecap="round">
+          <path d={open ? 'M5 12h14' : 'M12 5v14M5 12h14'} />
+        </svg>
+        {open ? 'FERMER' : 'AJOUTER UN CHAMPION'}
+      </button>
+
+      {open && (
+        <div style={{ marginTop: 13, paddingTop: 14, borderTop: `1px solid ${rc}22` }}>
+          <div style={{ fontFamily: T.mono, fontSize: 9, color: T.textMute, letterSpacing: '0.16em', marginBottom: 11 }}>CATALOGUE · CLIQUE POUR AJOUTER</div>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            {available.map(c => (
+              <div key={c.id} onClick={() => onToggle(role, c.id)} title={c.name} style={{ cursor: 'pointer', opacity: 0.78, transition: 'opacity .12s' }}>
+                <div style={{ width: 40, height: 40, borderRadius: 8, overflow: 'hidden', border: `1px solid rgba(255,255,255,0.1)` }}>
+                  <img src={championIconUrl(c.id)} alt={c.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
   )
 }
 
@@ -130,7 +219,6 @@ function AvailHeatEdit({ grid, onChange }: {
           <span style={{ fontFamily: T.mono, fontSize: 8.5, color: T.textMute, letterSpacing: '0.08em', marginTop: 3 }}>{DAYS[di]}</span>
         </div>
       ))}
-      {/* Slot labels */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 5, paddingTop: 0, justifyContent: 'flex-start' }}>
         {SLOTS.map((s, i) => (
           <div key={i} style={{ height: 16, display: 'flex', alignItems: 'center', paddingLeft: 4 }}>
@@ -138,7 +226,6 @@ function AvailHeatEdit({ grid, onChange }: {
           </div>
         ))}
       </div>
-      {/* Legend */}
       <div style={{ marginLeft: 'auto', alignSelf: 'flex-end', display: 'flex', alignItems: 'center', gap: 6, paddingBottom: 18 }}>
         <span style={{ fontFamily: T.mono, fontSize: 9, color: T.textMute }}>MOINS</span>
         {heat.map((h, i) => (
@@ -168,8 +255,6 @@ function rankLabel(rankKey: string | null, division: string | null, lp: number |
   return lp !== null ? `${base} · ${lp} LP` : base
 }
 
-// ── Grille dispo initiale depuis les slots DB ─────────────────────────────────
-
 function slotsToGrid(slots: AvailSlot[]): number[][] {
   const grid = Array.from({ length: 7 }, () => Array(6).fill(0))
   for (const s of slots) {
@@ -195,27 +280,29 @@ function gridToSlots(grid: number[][]): AvailSlot[] {
 export default function MeClient(props: MeClientProps) {
   const [bio,       setBio]       = useState(props.bio ?? '')
   const [roles,     setRoles]     = useState<string[]>(
-    props.mainRoles.length > 0
-      ? (props.secondaryRole ? [props.mainRoles[0], props.secondaryRole] : [props.mainRoles[0]])
-      : []
+    props.mainRoles.filter(r => r && ROLE_META[r]).slice(0, 2)
   )
   const [looking,   setLooking]   = useState<string[]>(props.lookingForRoles)
   const [styles,    setStyles]    = useState<string[]>(props.playstyles)
   const [langs,     setLangs]     = useState<string[]>(props.languages)
   const [voice,     setVoice]     = useState(props.voiceRequired)
   const [avGrid,    setAvGrid]    = useState<number[][]>(() => slotsToGrid(props.availability))
+  const [pools,     setPools]     = useState<Record<string, string[]>>(props.champPool)
   const [saved,     setSaved]     = useState(false)
   const [syncing,   setSyncing]   = useState(false)
 
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const poolTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const rkColor  = RANK_COLORS[props.rankKey ?? 'iron'] ?? T.textDim
   const initials = (props.gameName ?? props.displayName ?? '?').slice(0, 2).toUpperCase()
   const rankLbl  = rankLabel(props.rankKey, props.division, props.lp)
   const main      = roles[0] ?? null
   const secondary = roles[1] ?? null
+  // rôles joués avec au moins 1 champion dans la pool
+  const poolRoles = roles.filter(r => (pools[r] ?? []).length > 0)
 
-  // ── Debounced autosave ────────────────────────────────────────────────────
+  // ── Debounced autosave prefs ──────────────────────────────────────────────
   const schedSave = useCallback((patch: object) => {
     setSaved(false)
     if (saveTimer.current) clearTimeout(saveTimer.current)
@@ -224,6 +311,20 @@ export default function MeClient(props: MeClientProps) {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(patch),
+      })
+      setSaved(true)
+    }, DEBOUNCE_MS)
+  }, [])
+
+  // ── Debounced autosave pools ──────────────────────────────────────────────
+  const schedSavePools = useCallback((newPools: Record<string, string[]>) => {
+    setSaved(false)
+    if (poolTimer.current) clearTimeout(poolTimer.current)
+    poolTimer.current = setTimeout(async () => {
+      await fetch('/api/me/pools', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ champion_pool: newPools }),
       })
       setSaved(true)
     }, DEBOUNCE_MS)
@@ -244,6 +345,7 @@ export default function MeClient(props: MeClientProps) {
   }
 
   function updRoles(v: string) {
+    if (!roles.includes(v) && roles.length >= 2) return
     const next = toggleRole(setRoles, roles, v)
     schedSave({ main_roles: next })
   }
@@ -272,6 +374,18 @@ export default function MeClient(props: MeClientProps) {
       return g
     })
   }
+  function toggleChamp(role: string, champ: string) {
+    const cur = pools[role] ?? []
+    const next = { ...pools, [role]: cur.includes(champ) ? cur.filter(c => c !== champ) : [...cur, champ] }
+    setPools(next)
+    schedSavePools(next)
+  }
+  function promoteChamp(role: string, champ: string) {
+    const cur = pools[role] ?? []
+    const next = { ...pools, [role]: [champ, ...cur.filter(c => c !== champ)] }
+    setPools(next)
+    schedSavePools(next)
+  }
 
   async function handleResync() {
     setSyncing(true)
@@ -286,21 +400,13 @@ export default function MeClient(props: MeClientProps) {
 
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-      {/* Topbar */}
-      <div style={{ flexShrink: 0, height: 76, boxSizing: 'border-box', display: 'flex', alignItems: 'center', gap: 24, padding: '0 28px', borderBottom: `1px solid ${T.line}`, background: 'rgba(10,12,20,0.6)', backdropFilter: 'blur(12px)' }}>
-        <div style={{ flex: 1 }}>
-          <div style={{ fontFamily: T.mono, fontSize: 9.5, color: T.cyan, letterSpacing: '0.24em', marginBottom: 3 }}>◢ MON PROFIL · ÉDITION</div>
-          <div style={{ fontFamily: T.display, fontSize: 24, color: T.text, letterSpacing: '0.02em', lineHeight: 1 }}>
-            {props.gameName ?? props.displayName ?? 'Mon profil'}
-          </div>
+      {/* Toast ENREGISTRÉ */}
+      {saved && (
+        <div style={{ position: 'fixed', bottom: 28, right: 28, zIndex: 400, display: 'inline-flex', alignItems: 'center', gap: 9, padding: '11px 18px', borderRadius: 12, background: 'rgba(0,255,157,0.1)', border: '1px solid rgba(0,255,157,0.35)', backdropFilter: 'blur(12px)', boxShadow: '0 4px 24px rgba(0,0,0,0.5)', fontFamily: T.mono, fontSize: 11, color: T.live, letterSpacing: '0.12em' }}>
+          <span style={{ width: 7, height: 7, borderRadius: '50%', background: T.live, boxShadow: `0 0 8px ${T.live}`, flexShrink: 0 }} />
+          ENREGISTRÉ
         </div>
-        {saved && (
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7, fontFamily: T.mono, fontSize: 10, color: T.live, letterSpacing: '0.1em' }}>
-            <span style={{ width: 6, height: 6, borderRadius: '50%', background: T.live, boxShadow: `0 0 6px ${T.live}` }} />
-            ENREGISTRÉ
-          </span>
-        )}
-      </div>
+      )}
 
       {/* Body */}
       <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '26px 36px 40px' }}>
@@ -309,7 +415,7 @@ export default function MeClient(props: MeClientProps) {
           {/* ── Colonne gauche : aperçu live ──────────────────────────── */}
           <div>
             <div style={{ position: 'sticky', top: 0 }}>
-              <div style={{ fontFamily: T.mono, fontSize: 10, color: T.textDim, letterSpacing: '0.22em', marginBottom: 14 }}>◢ APERÇU LIVE</div>
+              <div style={{ fontFamily: T.mono, fontSize: 10, color: T.textDim, letterSpacing: '0.22em', marginBottom: 14 }}>◢ APERÇU LIVE · CE QUE VOIENT LES AUTRES</div>
               <div style={{ position: 'relative', borderRadius: 18, overflow: 'hidden', background: `linear-gradient(180deg, ${T.surface}, ${T.bg})`, border: `1px solid ${T.line}` }}>
                 <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: `linear-gradient(90deg, transparent, ${T.cyan}, ${T.violet}, transparent)` }} />
                 <div style={{ padding: '24px 22px', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
@@ -359,6 +465,22 @@ export default function MeClient(props: MeClientProps) {
                   <p style={{ margin: '16px 0 0', fontSize: 13, color: bio ? T.textDim : T.textMute, lineHeight: 1.55, fontStyle: bio ? 'italic' : 'normal' }}>
                     {bio ? `"${bio}"` : 'Ta bio apparaîtra ici…'}
                   </p>
+                  {/* Langues + VOCAL */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 14, flexWrap: 'wrap', justifyContent: 'center' }}>
+                    {langs.length > 0
+                      ? langs.map((l, i) => <LangChip key={l} code={l} primary={i === 0} />)
+                      : <span style={{ fontFamily: T.mono, fontSize: 10, color: T.textMute }}>Aucune langue</span>
+                    }
+                    {voice && (
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontFamily: T.mono, fontSize: 9, color: T.live, letterSpacing: '0.1em', marginLeft: 2 }}>
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke={T.live} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M12 2a3 3 0 0 1 3 3v6a3 3 0 0 1-6 0V5a3 3 0 0 1 3-3z" />
+                          <path d="M5 11a7 7 0 0 0 14 0M12 18v3" />
+                        </svg>
+                        VOCAL
+                      </span>
+                    )}
+                  </div>
                   {/* Style tags */}
                   {styles.length > 0 && (
                     <div style={{ display: 'flex', gap: 6, marginTop: 12, flexWrap: 'wrap', justifyContent: 'center' }}>
@@ -368,12 +490,25 @@ export default function MeClient(props: MeClientProps) {
                     </div>
                   )}
                 </div>
-                {/* Champion pool */}
-                {props.champPool.length > 0 && (
-                  <div style={{ display: 'flex', justifyContent: 'center', gap: 8, padding: '0 22px 22px' }}>
-                    {props.champPool.slice(0, 5).map((ch, i) => (
-                      <div key={ch} style={{ width: 44, height: 44, borderRadius: 9, overflow: 'hidden', background: T.surface2, border: `1.5px solid ${i === 0 ? rkColor : 'rgba(255,255,255,0.1)'}`, boxShadow: i === 0 ? `0 0 0 1.5px ${rkColor}, 0 0 8px ${rkColor}66` : 'none' }}>
-                        <img src={championIconUrl(ch)} alt={ch} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+
+                {/* Champion pool par rôle */}
+                {poolRoles.length > 0 && (
+                  <div style={{ padding: '0 22px 22px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    {poolRoles.map((r, ri) => (
+                      <div key={r}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 8 }}>
+                          <RoleIcon role={r} size={13} active />
+                          <span style={{ fontFamily: T.mono, fontSize: 9, color: ROLE_META[r]?.c ?? T.cyan, letterSpacing: '0.12em', fontWeight: 700 }}>{ROLE_META[r]?.name ?? r}</span>
+                          <span style={{ fontFamily: T.mono, fontSize: 8, color: T.textMute, letterSpacing: '0.1em' }}>{ri === 0 ? 'PRINCIPAL' : 'SECONDAIRE'}</span>
+                          <div style={{ flex: 1, height: 1, background: T.line }} />
+                        </div>
+                        <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap' }}>
+                          {(pools[r] ?? []).map((ch, i) => (
+                            <div key={ch} style={{ width: 38, height: 38, borderRadius: 8, overflow: 'hidden', border: `2px solid ${i === 0 ? ROLE_META[r]?.c ?? T.cyan : 'rgba(255,255,255,0.1)'}`, boxShadow: i === 0 ? `0 0 8px ${ROLE_META[r]?.c ?? T.cyan}66` : 'none' }}>
+                              <img src={championIconUrl(ch)} alt={ch} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -447,6 +582,29 @@ export default function MeClient(props: MeClientProps) {
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 10 }}>
                 {ALL_ROLES.map(r => <RolePick key={r} role={r} active={looking.includes(r)} onClick={() => updLooking(r)} />)}
               </div>
+            </EditCard>
+
+            {/* Champion pool par rôle */}
+            <EditCard label="CHAMPION POOL · PAR RÔLE" accent={T.cyan} hint="SYNCHRONISÉ DEPUIS RIOT · ÉDITABLE">
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={T.textMute} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><circle cx="12" cy="12" r="10" /><path d="M12 16v-4M12 8h.01" /></svg>
+                <span style={{ fontFamily: T.body, fontSize: 12, color: T.textMute, lineHeight: 1.4 }}>
+                  Pool par rôle joué. Le 1er champion = ton <b style={{ color: T.textDim }}>OTP</b>. Cliquer un champion le retire ; &quot;★ OTP&quot; le passe en tête.
+                </span>
+              </div>
+              {roles.length > 0
+                ? roles.map((r, i) => (
+                  <RolePoolEditor
+                    key={r}
+                    role={r}
+                    label={i === 0 ? 'PRINCIPAL' : 'SECONDAIRE'}
+                    pool={pools[r] ?? []}
+                    onToggle={toggleChamp}
+                    onPromote={promoteChamp}
+                  />
+                ))
+                : <span style={{ fontFamily: T.mono, fontSize: 11, color: T.textMute }}>Sélectionne d&apos;abord un rôle dans &quot;JE JOUE&quot; pour éditer ta pool.</span>
+              }
             </EditCard>
 
             {/* Style & Langues */}

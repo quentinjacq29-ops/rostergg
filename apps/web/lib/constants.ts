@@ -41,6 +41,17 @@ export const ONB_STEPS = [
   'Disponibilités',
 ] as const
 
+// v2 — parcours DUO 7 étapes (Style de jeu retiré)
+export const ONB_STEPS_V2 = [
+  'Compte Riot',
+  'Tu cherches quoi',
+  'Langues',
+  'Rôle principal',
+  'Rôle recherché',
+  'Champion pool',
+  'Disponibilités',
+] as const
+
 export const PLATFORMS = ['EUW', 'EUNE', 'NA', 'KR', 'BR', 'LAN', 'LAS', 'OCE', 'TR', 'JP'] as const
 
 export const LANGS = [
