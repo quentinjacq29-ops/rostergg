@@ -155,7 +155,7 @@ export default function AppShell({
         lastSeen: Date.now(),
       }))
     } catch { /* localStorage inaccessible */ }
-  }, [user?.gameName])
+  }, [user?.gameName, user?.rankKey, user?.tagLine])
 
   return (
     // DesktopShell : flex row, height 100vh, overflow hidden
