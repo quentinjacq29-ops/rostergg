@@ -37,7 +37,7 @@ const STYLES = [
 ]
 
 export type FilterValues = {
-  role: string | null
+  role: string[] | null
   rankFloor: string | null
   rankCeiling: string | null
   voice: boolean | null
@@ -162,7 +162,7 @@ export default function DuoFilterPanel({
         {/* Réinitialiser */}
         <div style={{ marginLeft: 'auto' }}>
           <button
-            onClick={() => setF({ role: null, rankFloor: null, rankCeiling: null, voice: null, region: null })}
+            onClick={() => setF({ role: null, rankFloor: null, rankCeiling: null, voice: null, region: null } as FilterValues)}
             style={{
               display: 'inline-flex', alignItems: 'center', gap: 9,
               padding: '13px 22px', borderRadius: 12, cursor: 'pointer',
@@ -182,14 +182,18 @@ export default function DuoFilterPanel({
       <div style={{ flex: 1, overflowY: 'auto', display: 'flex', justifyContent: 'center', padding: '30px 40px 40px' }}>
         <div style={{ width: '100%', maxWidth: 760 }}>
 
-          {/* RÔLE RECHERCHÉ */}
+          {/* RÔLE RECHERCHÉ — multi-select */}
           <Section label="RÔLE RECHERCHÉ">
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 12 }}>
               {(['TOP','JNG','MID','ADC','SUP'] as const).map(r => {
-                const on = f.role === r
+                const on = (f.role ?? []).includes(r)
                 const rc = ROLE_META[r].c
                 return (
-                  <div key={r} onClick={() => set('role', on ? null : r)} style={{
+                  <div key={r} onClick={() => {
+                    const cur = f.role ?? []
+                    const next = on ? cur.filter(x => x !== r) : [...cur, r]
+                    set('role', next.length ? next : null)
+                  }} style={{
                     display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8,
                     padding: '16px 0', borderRadius: 13, cursor: 'pointer',
                     background: on ? `${rc}1a` : 'rgba(255,255,255,0.03)',
@@ -201,7 +205,7 @@ export default function DuoFilterPanel({
                 )
               })}
             </div>
-            {f.role === null && (
+            {!f.role?.length && (
               <div style={{ marginTop: 10, fontFamily: T.mono, fontSize: 9, color: T.textMute, letterSpacing: '0.12em' }}>
                 AUCUN RÔLE SÉLECTIONNÉ → TOUS RÔLES · Role fit neutralisé dans le score
               </div>
