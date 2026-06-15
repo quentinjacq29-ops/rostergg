@@ -32,10 +32,15 @@ export async function middleware(request: NextRequest) {
   // 1. Apply next-intl locale routing
   const response = handleI18n(request)
 
-  // 2. Refresh Supabase session & propagate cookies onto the same response
+  // 2. Skip Supabase auth if env vars are not configured (misconfigured deployment)
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+    return response
+  }
+
+  // 3. Refresh Supabase session & propagate cookies onto the same response
   const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
     {
       cookies: {
         getAll() {
@@ -57,14 +62,14 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
   const locale = pathname.split('/')[1] || routing.defaultLocale
 
-  // 3. Guard: unauthenticated → login
+  // 4. Guard: unauthenticated → login
   if (!user && isProtected(pathname)) {
     const url = new URL(`/${locale}/login`, request.url)
     url.searchParams.set('next', pathname)
     return NextResponse.redirect(url)
   }
 
-  // 4. Guard: already logged in → skip auth pages (but not UAT)
+  // 5. Guard: already logged in → skip auth pages (but not UAT)
   if (user && isAuthOnly(pathname) && !UAT_PUBLIC.some(r => r.test(pathname))) {
     return NextResponse.redirect(new URL(`/${locale}/duo`, request.url))
   }
