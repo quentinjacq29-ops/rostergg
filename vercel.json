@@ -1,5 +1,5 @@
 {
   "installCommand": "pnpm install",
-  "buildCommand": "pnpm turbo build --filter=@rostergg/web",
-  "outputDirectory": "apps/web/.next"
+  "buildCommand": "pnpm turbo build --filter=@rostergg/web && mv apps/web/.next .next",
+  "outputDirectory": ".next"
 }
