@@ -24,7 +24,7 @@ export default async function MePage({ params: { locale } }: Props) {
   let rankKey: string | null = null
   let division: string | null = null
   let lp: number | null = null
-  const champPool: string[] = []
+  let masteryKeys: string[] = []
 
   if (riotAccount?.id) {
     const [{ data: soloRank }, { data: mastery }] = await Promise.all([
@@ -32,10 +32,25 @@ export default async function MePage({ params: { locale } }: Props) {
       supabase.from('champion_mastery').select('champion_key').eq('riot_account_id', riotAccount.id).order('mastery_points', { ascending: false }).limit(5),
     ])
     if (soloRank) { rankKey = soloRank.tier?.toLowerCase() ?? null; division = soloRank.division ?? null; lp = soloRank.league_points ?? null }
-    for (const m of mastery ?? []) { if (m.champion_key) champPool.push(m.champion_key) }
+    masteryKeys = (mastery ?? []).map(m => m.champion_key).filter(Boolean) as string[]
   }
 
-  const mainRoles      = (prefs?.main_roles as string[])         ?? []
+  // champion_pool depuis matching_prefs (édité par le user).
+  // Si vide (premier chargement après onboarding ou compte sans pool),
+  // on initialise depuis la mastery Riot sur le rôle principal.
+  const rawPool = prefs?.champion_pool
+  const savedPool: Record<string, string[]> =
+    rawPool !== null && rawPool !== undefined && !Array.isArray(rawPool) && typeof rawPool === 'object'
+      ? (rawPool as Record<string, string[]>)
+      : {}
+  const mainRoles = (prefs?.main_roles as string[]) ?? []
+  const champPool: Record<string, string[]> =
+    Object.keys(savedPool).length > 0
+      ? savedPool
+      : masteryKeys.length > 0 && mainRoles[0]
+        ? { [mainRoles[0]]: masteryKeys }
+        : {}
+
   const lookingForRoles = (prefs?.looking_for_roles as string[]) ?? []
   const playstyles      = (prefs?.playstyles as string[])        ?? []
   const languages       = (prefs?.languages as string[])         ?? []
