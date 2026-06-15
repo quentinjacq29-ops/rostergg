@@ -1,9 +1,8 @@
 import { createServerClient } from '@supabase/ssr'
-import createIntlMiddleware from 'next-intl/middleware'
 import { type NextRequest, NextResponse } from 'next/server'
-import { routing } from './i18n/routing'
 
-const handleI18n = createIntlMiddleware(routing)
+const LOCALES = ['fr', 'en'] as const
+const DEFAULT_LOCALE = 'fr'
 
 // Routes requiring authentication (regex against full localized path)
 const PROTECTED = [
@@ -18,35 +17,44 @@ const PROTECTED = [
 // Routes inaccessible when already logged in
 const AUTH_ONLY = [/^\/[a-z]{2}\/login$/, /^\/[a-z]{2}\/signup$/]
 
-// Routes UAT — toujours publiques (gate gérée dans la page/route elle-même)
-const UAT_PUBLIC = [/^\/[a-z]{2}\/uat-login$/]
+function getPreferredLocale(request: NextRequest): string {
+  const accept = request.headers.get('accept-language') ?? ''
+  const preferred = accept.split(',')[0].split('-')[0].toLowerCase()
+  return (LOCALES as readonly string[]).includes(preferred) ? preferred : DEFAULT_LOCALE
+}
 
-function isProtected(p: string) {
-  return PROTECTED.some((r) => r.test(p))
-}
-function isAuthOnly(p: string) {
-  return AUTH_ONLY.some((r) => r.test(p))
-}
+function isProtected(p: string) { return PROTECTED.some((r) => r.test(p)) }
+function isAuthOnly(p: string)  { return AUTH_ONLY.some((r) => r.test(p)) }
 
 export async function middleware(request: NextRequest) {
-  // 1. Apply next-intl locale routing
-  const response = handleI18n(request)
+  const { pathname } = request.nextUrl
 
-  // 2. Skip Supabase auth if env vars are not configured (misconfigured deployment)
+  // 1. Locale prefix — redirect if missing
+  const hasLocale = (LOCALES as readonly string[]).some(
+    (l) => pathname === `/${l}` || pathname.startsWith(`/${l}/`)
+  )
+  if (!hasLocale) {
+    const locale = getPreferredLocale(request)
+    const url = request.nextUrl.clone()
+    url.pathname = `/${locale}${pathname}`
+    return NextResponse.redirect(url)
+  }
+
+  const response = NextResponse.next()
+
+  // 2. Skip Supabase auth if env vars are not configured
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
     return response
   }
 
-  // 3. Refresh Supabase session & propagate cookies onto the same response
+  // 3. Refresh Supabase session & propagate cookies
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
     {
       cookies: {
-        getAll() {
-          return request.cookies.getAll()
-        },
-        setAll(cookiesToSet: { name: string; value: string; options: Record<string, unknown> }[]) {
+        getAll() { return request.cookies.getAll() },
+        setAll(cookiesToSet) {
           cookiesToSet.forEach(({ name, value, options }) => {
             response.cookies.set(name, value, options as Parameters<typeof response.cookies.set>[2])
           })
@@ -55,12 +63,9 @@ export async function middleware(request: NextRequest) {
     }
   )
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const { data: { user } } = await supabase.auth.getUser()
 
-  const { pathname } = request.nextUrl
-  const locale = pathname.split('/')[1] || routing.defaultLocale
+  const locale = pathname.split('/')[1] || DEFAULT_LOCALE
 
   // 4. Guard: unauthenticated → login
   if (!user && isProtected(pathname)) {
@@ -69,8 +74,8 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  // 5. Guard: already logged in → skip auth pages (but not UAT)
-  if (user && isAuthOnly(pathname) && !UAT_PUBLIC.some(r => r.test(pathname))) {
+  // 5. Guard: already logged in → skip auth pages
+  if (user && isAuthOnly(pathname)) {
     return NextResponse.redirect(new URL(`/${locale}/duo`, request.url))
   }
 
@@ -78,6 +83,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  // Exclude api routes, auth callback, Next internals, and static files
   matcher: ['/((?!api|auth|_next|_vercel|.*\\..*).*)'],
 }
