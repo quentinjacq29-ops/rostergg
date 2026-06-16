@@ -15,7 +15,6 @@ const PROTECTED = [
 const AUTH_ONLY = [/^\/[a-z]{2}\/login$/, /^\/[a-z]{2}\/signup$/]
 
 export function middleware(request: NextRequest) {
-  console.log('[MW] start', request.nextUrl.pathname)
   const { pathname } = request.nextUrl
 
   // Redirect to default locale if no locale prefix
