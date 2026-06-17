@@ -14,10 +14,32 @@ const PROTECTED = [
 
 const AUTH_ONLY = [/^\/[a-z]{2}\/login$/, /^\/[a-z]{2}\/signup$/]
 
+function checkBasicAuth(request: NextRequest): NextResponse | null {
+  const user = process.env.BASIC_AUTH_USER
+  const pass = process.env.BASIC_AUTH_PASSWORD
+  if (!user || !pass) return null
+
+  const header = request.headers.get('authorization') ?? ''
+  if (header.startsWith('Basic ')) {
+    const decoded = atob(header.slice(6))
+    const colon = decoded.indexOf(':')
+    if (colon !== -1 && decoded.slice(0, colon) === user && decoded.slice(colon + 1) === pass) {
+      return null
+    }
+  }
+
+  return new NextResponse('Unauthorized', {
+    status: 401,
+    headers: { 'WWW-Authenticate': 'Basic realm="RosterGG"' },
+  })
+}
+
 export function middleware(request: NextRequest) {
+  const auth = checkBasicAuth(request)
+  if (auth) return auth
+
   const { pathname } = request.nextUrl
 
-  // Redirect to default locale if no locale prefix
   const hasLocale = (LOCALES as readonly string[]).some(
     (l) => pathname === `/${l}` || pathname.startsWith(`/${l}/`)
   )
@@ -30,7 +52,6 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  // Auth guards handled server-side in page.tsx (redirect to login)
   return NextResponse.next()
 }
 
