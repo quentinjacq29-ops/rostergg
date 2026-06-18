@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="tile" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#161a26"></stop>
+      <stop offset="1" stop-color="#06070b"></stop>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.32" cy="0.28" r="0.7">
+      <stop offset="0" stop-color="#8b5cf6" stop-opacity="0.45"></stop>
+      <stop offset="0.6" stop-color="#8b5cf6" stop-opacity="0"></stop>
+    </radialGradient>
+    <linearGradient id="dot" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#00e0ff"></stop>
+      <stop offset="1" stop-color="#8b5cf6"></stop>
+    </linearGradient>
+  </defs>
+  <rect x="1" y="1" width="62" height="62" rx="15" fill="url(#tile)"></rect>
+  <rect x="1" y="1" width="62" height="62" rx="15" fill="url(#glow)"></rect>
+  <rect x="1.5" y="1.5" width="61" height="61" rx="14.5" fill="none" stroke="rgba(255,255,255,0.10)" stroke-width="1"></rect>
+  <g transform="translate(8,8)">
+    <path d="M9 9 L20 24 L9 39" fill="none" stroke="#00e0ff" stroke-width="5.2" stroke-linecap="round" stroke-linejoin="round"></path>
+    <path d="M39 9 L28 24 L39 39" fill="none" stroke="#8b5cf6" stroke-width="5.2" stroke-linecap="round" stroke-linejoin="round"></path>
+    <circle cx="24" cy="24" r="4.8" fill="url(#dot)"></circle>
+  </g>
+</svg>
