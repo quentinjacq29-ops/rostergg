@@ -15,24 +15,45 @@
 *::-webkit-scrollbar-corner { background: transparent; }
 
 :root {
+  /* Fonts */
   --font-display: 'Anton', Impact, sans-serif;
   --font-body: 'Space Grotesk', system-ui, -apple-system, sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  /* Fonds */
   --void: #06070b;
   --bg: #0a0c14;
   --surface: #0f121c;
   --elevated: #161a26;
+  /* Lignes */
   --line: rgba(255,255,255,0.06);
   --line-strong: rgba(255,255,255,0.12);
+  /* Texte */
   --text: #f4f6ff;
   --text-dim: #9aa2bf;
   --text-mute: #5a607a;
+  /* Accents marque */
   --cyan: #00e0ff;
+  --cyan-dim: #0099b3;
   --violet: #8b5cf6;
+  --violet-dim: #5b3bb8;
+  /* Sémantique */
   --rose: #ff3d6e;
-  --train-rose: #ff3d6e;
+  --danger: #ff3d6e;
   --live: #00ff9d;
   --gold: #ffd166;
+  --queue: #ffb547;
+  --diamond: #7cc6ff;
+  /* Dégradé signature */
+  --grad: linear-gradient(135deg, var(--cyan), var(--violet));
+  /* Rôles LoL */
+  --r-top: #ff6a4d;
+  --r-jng: #3ddc97;
+  --r-mid: #00e0ff;
+  --r-adc: #ffd166;
+  --r-sup: #b58dff;
+  --r-fill: #9aa2bf;
+  /* Layout */
+  --pad: 40px;
 }
 
 @layer base {
@@ -58,13 +79,86 @@
   .font-mono-rgg { font-family: var(--font-mono, ui-monospace); }
 }
 
-/* Pulse animation for live dots */
+/* ── Animations rgg.css ── */
 @keyframes rgg-pulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.35; }
 }
 .rgg-pulse {
   animation: rgg-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+/* Pulse ring (présence / live dot) */
+@keyframes rgg-pulse-ring {
+  0%   { box-shadow: 0 0 0 0 currentColor; opacity: 1; }
+  100% { box-shadow: 0 0 0 9px transparent; opacity: 0; }
+}
+.rgg-pulse-ring {
+  position: relative;
+  display: inline-block;
+}
+.rgg-pulse-ring::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: 0 0 0 0 currentColor;
+  color: inherit;
+  animation: rgg-pulse-ring 1.6s infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .rgg-pulse-ring::after { animation: none; }
+}
+
+/* ── Public nav (landing) hamburger ── */
+.landing-hamb {
+  display: none;
+  align-items: center;
+  justify-content: center;
+}
+.landing-mobile-menu {
+  display: none;
+  flex-direction: column;
+  gap: 0;
+  border-bottom: 1px solid var(--line);
+  background: rgba(10,12,20,0.96);
+  position: sticky;
+  top: 73px;
+  z-index: 49;
+}
+.landing-mobile-menu.open { display: flex; }
+
+@media (max-width: 680px) {
+  .landing-hamb { display: inline-flex !important; }
+}
+
+/* ── Auth layout (login / signup) responsive ── */
+.auth-layout {
+  display: grid;
+  grid-template-columns: 1fr 540px;
+  min-height: 100vh;
+}
+.auth-mobile-head { display: none !important; }
+
+@media (max-width: 900px) {
+  .auth-layout { grid-template-columns: 1fr; }
+  .auth-brand-panel { display: none !important; }
+  .auth-card-panel {
+    padding: 0 !important;
+    min-height: 100vh;
+    justify-content: flex-start !important;
+  }
+  .auth-card-topline { display: none !important; }
+  .auth-inner-wrap {
+    max-width: 440px !important;
+    padding: 26px 22px calc(40px + env(safe-area-inset-bottom)) !important;
+    margin: 0 auto !important;
+  }
+  .auth-mobile-head {
+    display: flex !important;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 28px;
+  }
 }
 
 /* Landing page responsive */

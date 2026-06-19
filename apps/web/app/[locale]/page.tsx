@@ -1,14 +1,14 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { Link } from '@/i18n/navigation'
-import LanguageSwitcher from '@/components/LanguageSwitcher'
 import Avatar from '@/components/ui/Avatar'
 import MatchRing from '@/components/ui/MatchRing'
 import RoleIcon from '@/components/ui/RoleIcon'
+import PublicNav from '@/components/ui/PublicNav'
 
 type Props = { params: { locale: string } }
 
-// ─── Logo mark ──────────────────────────────────────────────────────────────
+// ─── Logo mark (local — footer + hero CTA uniquement) ───────────────────────
 function LogoMark({ size = 36 }: { size?: number }) {
   return (
     <span style={{ width: size, height: size, borderRadius: Math.round(size * 0.3), overflow: 'hidden', background: 'linear-gradient(150deg, var(--surface), var(--void))', boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.12), 0 0 16px rgba(0,224,255,0.2)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
@@ -18,37 +18,6 @@ function LogoMark({ size = 36 }: { size?: number }) {
         <circle cx="24" cy="24" r="4.6" fill="var(--cyan)" />
       </svg>
     </span>
-  )
-}
-
-// ─── Navbar ──────────────────────────────────────────────────────────────────
-function LNav() {
-  return (
-    <nav style={{ position: 'sticky', top: 0, zIndex: 50, display: 'flex', alignItems: 'center', gap: 28, padding: '18px 40px', borderBottom: '1px solid var(--line)', background: 'rgba(10,12,20,0.72)', backdropFilter: 'blur(14px)' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
-        <LogoMark size={36} />
-        <span style={{ fontFamily: 'var(--font-display)', fontSize: 22, letterSpacing: '0.04em' }}>ROSTER<span style={{ color: 'var(--cyan)' }}>GG</span></span>
-      </div>
-      <div className="landing-nav-links" style={{ display: 'flex', gap: 26, marginLeft: 20 }}>
-        {['Duo', 'Équipes', 'Coaching'].map(l => (
-          <span key={l} style={{ fontFamily: 'var(--font-body)', fontSize: 14, color: 'var(--text-dim)', cursor: 'pointer', fontWeight: 500 }}>{l}</span>
-        ))}
-      </div>
-      <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 14 }}>
-        <LanguageSwitcher />
-        <Link className="landing-nav-guest" href="/onboarding/1" style={{ display: 'inline-flex', alignItems: 'center', gap: 7, fontFamily: 'var(--font-body)', fontSize: 14, color: 'var(--text-dim)', textDecoration: 'none', fontWeight: 500 }}>
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--cyan)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z" /><circle cx="12" cy="12" r="3" /></svg>
-          Explorer sans compte
-        </Link>
-        <Link href="/login" style={{ fontFamily: 'var(--font-body)', fontSize: 14, color: 'var(--text)', textDecoration: 'none', fontWeight: 500 }}>
-          Se connecter
-        </Link>
-        <Link href="/onboarding/1" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '11px 22px', borderRadius: 11, background: 'linear-gradient(135deg, var(--cyan), var(--violet))', color: '#001018', fontFamily: 'var(--font-display)', fontSize: 13, letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 700, boxShadow: '0 10px 26px -10px var(--cyan)', textDecoration: 'none' }}>
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#001018" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6z" /></svg>
-          Connexion Riot
-        </Link>
-      </div>
-    </nav>
   )
 }
 
@@ -320,7 +289,7 @@ export default async function HomePage({ params: { locale } }: Props) {
 
   return (
     <div style={{ width: '100%', minHeight: '100vh', background: 'var(--bg)', color: 'var(--text)', fontFamily: 'var(--font-body)', backgroundImage: 'radial-gradient(1000px 600px at 100% -5%, rgba(139,92,246,0.07), transparent 55%)' }}>
-      <LNav />
+      <PublicNav />
       <LHero />
       <LPillars />
       <LHowItWorks />
