@@ -52,10 +52,6 @@ function isTooClose(pseudo: string, gameName: string): boolean {
 type Body = { displayName: string; gameName?: string }
 
 export async function POST(req: NextRequest) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ ok: false, reason: 'unauthenticated' }, { status: 401 })
-
   const { displayName, gameName } = await req.json() as Body
 
   if (!displayName) return NextResponse.json({ ok: false, reason: 'missing' })
@@ -83,16 +79,15 @@ export async function POST(req: NextRequest) {
     })
   }
 
-  // 4. Unicité (exclure le profil courant)
-  const { data: existing } = await supabase
-    .from('profiles')
-    .select('id')
-    .ilike('display_name', displayName.trim())
-    .neq('id', user.id)
-    .maybeSingle()
+  // 4. Unicité — accessible même sans session (onboarding pré-auth)
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  const query = supabase.from('profiles').select('id').ilike('display_name', displayName.trim())
+  if (user) query.neq('id', user.id)
+  const { data: existing } = await query.maybeSingle()
 
   if (existing) {
-    // Générer quelques variantes
     const base = displayName.trim()
     const suggestions = [`${base}${Math.floor(Math.random() * 90 + 10)}`, `${base}_GG`, `x${base}`]
     return NextResponse.json({

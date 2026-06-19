@@ -360,7 +360,7 @@ export default function OnbStep1Riot({ locale, step }: Props) {
             <button
               onClick={() => fetchSuggestion(verified.gameName)}
               disabled={rerolling}
-              style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '0 18px', height: 56, borderRadius: 13, cursor: 'pointer', background: 'rgba(255,255,255,0.04)', border: '1px solid var(--line-strong)', color: 'var(--text-dim)', fontFamily: 'var(--font-display)', fontSize: 13, letterSpacing: '0.08em', textTransform: 'uppercase', opacity: rerolling ? 0.5 : 1 }}
+              style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '0 18px', height: 56, borderRadius: 13, cursor: 'pointer', background: 'rgba(255,255,255,0.04)', border: '1px solid var(--line-strong)', color: 'var(--text-dim)', fontFamily: 'var(--font-display)', fontSize: 13, letterSpacing: '0.08em', textTransform: 'uppercase', opacity: rerolling ? 0.5 : 1, flexShrink: 0, whiteSpace: 'nowrap' }}
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-dim)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M23 4v6h-6M1 20v-6h6" />

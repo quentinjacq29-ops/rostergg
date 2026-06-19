@@ -30,13 +30,10 @@ function generateSuggestion(seed?: string): string {
 }
 
 export async function GET(req: NextRequest) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'unauthenticated' }, { status: 401 })
-
   const seed = req.nextUrl.searchParams.get('seed') ?? undefined
+  const supabase = await createClient()
 
-  // Générer jusqu'à 5 candidats, retourner le premier non pris
+  // Générer jusqu'à 5 candidats, retourner le premier non pris (accessible sans session)
   for (let attempt = 0; attempt < 5; attempt++) {
     const candidate = generateSuggestion(seed ? `${seed}_${attempt}` : undefined)
     const { data: taken } = await supabase
@@ -47,7 +44,6 @@ export async function GET(req: NextRequest) {
     if (!taken) return NextResponse.json({ suggestion: candidate })
   }
 
-  // Fallback avec un suffixe numérique aléatoire
   const base = generateSuggestion(seed)
   return NextResponse.json({ suggestion: `${base}${Math.floor(Math.random() * 900 + 100)}` })
 }
