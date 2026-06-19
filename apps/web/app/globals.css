@@ -199,31 +199,36 @@
   .landing-footer-grid { grid-template-columns: 1fr !important; }
 }
 
+/* Onboarding — valeurs par défaut (desktop) en CSS pur, sans inline style */
+/* Cela permet aux media queries mobiles de les surcharger sans !important */
+.onb-rail    { display: flex; }
+.onb-topbar  { display: none; }
+.onb-scroll  { padding: 52px 60px; }
+.onb-actions { padding: 18px 60px; }
+.onb-content { max-width: 640px; }
+.onb-title   { font-size: 42px; }
+.onb-lang-grid { grid-template-columns: repeat(3, 1fr); }
+
 /* Onboarding responsive */
 @media (max-width: 880px) {
-  /* Rail latéral : masqué → topbar mobile prend le relais */
-  .onb-rail { display: none !important; }
-  /* Topbar mobile : visible */
-  .onb-topbar { display: flex !important; }
-  /* Scroll : padding réduit */
-  .onb-scroll { padding: 24px 20px !important; }
-  /* Actions footer : sticky bottom, "Retour" et "Passer" masqués, "Continuer" full-width */
-  .onb-actions {
-    padding: 14px 20px calc(14px + env(safe-area-inset-bottom)) !important;
-    position: sticky !important;
-    bottom: 0 !important;
-  }
-  .onb-actions-back { display: none !important; }
-  .onb-actions-skip { display: none !important; }
-  .onb-actions-cont { flex: 1 !important; justify-content: center !important; }
+  /* Rail latéral masqué → topbar prend le relais */
+  .onb-rail   { display: none; }
+  .onb-topbar { display: flex; }
+  /* Padding scroll + footer réduits */
+  .onb-scroll  { padding: 24px 20px; }
+  .onb-actions { padding: 14px 20px calc(14px + env(safe-area-inset-bottom)); position: sticky; bottom: 0; }
+  /* Footer : seul "Continuer" reste, full-width */
+  .onb-actions-back { display: none; }
+  .onb-actions-skip { display: none; }
+  .onb-actions-cont { flex: 1; justify-content: center; }
   /* Contenu */
-  .onb-content { max-width: 560px !important; margin: 0 auto !important; }
-  .onb-content h1 { font-size: 34px !important; }
-  /* Grille langues : 3 colonnes → 2 */
-  .onb-lang-grid { grid-template-columns: repeat(2, 1fr) !important; }
+  .onb-content { max-width: 560px; margin: 0 auto; }
+  .onb-title   { font-size: 34px; }
+  /* Grille langues : 3 col → 2 */
+  .onb-lang-grid { grid-template-columns: repeat(2, 1fr); }
 }
 @media (max-width: 420px) {
-  .onb-content h1 { font-size: 28px !important; }
+  .onb-title { font-size: 28px; }
 }
 
 /* App Shell responsive */

@@ -96,10 +96,10 @@ export default function OnbStep8Riot({ locale }: Props) {
 
       {/* Riot ID input */}
       <label style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--text-dim)', letterSpacing: '0.18em', display: 'block', marginTop: 24 }}>RIOT ID</label>
-      <div style={{ display: 'flex', gap: 10, marginTop: 12 }}>
+      <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
         {/* Game name */}
         <div style={{
-          flex: 1, display: 'flex', alignItems: 'center', gap: 12, padding: '0 18px', height: 56,
+          flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 10, padding: '0 14px', height: 52,
           borderRadius: 13, background: 'rgba(255,255,255,0.04)',
           border: `1px solid ${gameName ? 'rgba(0,224,255,0.33)' : 'var(--line)'}`,
           boxShadow: gameName ? '0 0 0 3px rgba(0,224,255,0.08)' : 'none',
@@ -112,19 +112,19 @@ export default function OnbStep8Riot({ locale }: Props) {
             onKeyDown={e => e.key === 'Enter' && handleVerify()}
             placeholder="NomInvocateur"
             style={{
-              flex: 1, background: 'transparent', border: 'none', outline: 'none',
-              fontFamily: 'var(--font-display)', fontSize: 18, color: 'var(--text)',
+              flex: 1, minWidth: 0, background: 'transparent', border: 'none', outline: 'none',
+              fontFamily: 'var(--font-display)', fontSize: 16, color: 'var(--text)',
               letterSpacing: '0.02em',
             }}
           />
         </div>
         {/* Tag */}
         <div style={{
-          display: 'flex', alignItems: 'center', padding: '0 18px', height: 56,
+          display: 'flex', alignItems: 'center', padding: '0 10px', height: 52,
           borderRadius: 13, background: 'rgba(255,255,255,0.04)', border: '1px solid var(--line)',
-          gap: 2,
+          gap: 2, flexShrink: 0,
         }}>
-          <span style={{ fontFamily: 'var(--font-display)', fontSize: 18, color: 'var(--text-dim)' }}>#</span>
+          <span style={{ fontFamily: 'var(--font-display)', fontSize: 16, color: 'var(--text-dim)' }}>#</span>
           <input
             type="text"
             value={tagLine}
@@ -133,8 +133,8 @@ export default function OnbStep8Riot({ locale }: Props) {
             placeholder={PLATFORM_LABELS[platform] ?? 'TAG'}
             maxLength={5}
             style={{
-              width: 64, background: 'transparent', border: 'none', outline: 'none',
-              fontFamily: 'var(--font-display)', fontSize: 18, color: 'var(--text)',
+              width: 52, background: 'transparent', border: 'none', outline: 'none',
+              fontFamily: 'var(--font-display)', fontSize: 16, color: 'var(--text)',
               letterSpacing: '0.02em',
             }}
           />
@@ -144,15 +144,15 @@ export default function OnbStep8Riot({ locale }: Props) {
           onClick={handleVerify}
           disabled={loading || !gameName.trim() || !tagLine.trim()}
           style={{
-            height: 56, padding: '0 22px', borderRadius: 13, border: 'none', cursor: 'pointer',
+            height: 52, padding: '0 16px', borderRadius: 13, border: 'none', cursor: 'pointer',
             background: 'linear-gradient(135deg, var(--cyan), var(--violet))',
-            color: '#001018', fontFamily: 'var(--font-display)', fontSize: 13,
-            letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 700,
+            color: '#001018', fontFamily: 'var(--font-display)', fontSize: 12,
+            letterSpacing: '0.08em', textTransform: 'uppercase', fontWeight: 700,
             opacity: loading || !gameName.trim() || !tagLine.trim() ? 0.5 : 1,
-            flexShrink: 0,
+            flexShrink: 0, whiteSpace: 'nowrap',
           }}
         >
-          {loading ? '…' : 'Vérifier'}
+          {loading ? '…' : 'OK'}
         </button>
       </div>
 
@@ -186,10 +186,10 @@ export default function OnbStep8Riot({ locale }: Props) {
             }}>
               {verified.gameName.slice(0, 2).toUpperCase()}
             </div>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontFamily: 'var(--font-display)', fontSize: 22, color: 'var(--text)', letterSpacing: '0.02em' }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontFamily: 'var(--font-display)', fontSize: 20, color: 'var(--text)', letterSpacing: '0.02em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {verified.gameName.toUpperCase()}{' '}
-                <span style={{ color: 'var(--text-dim)', fontSize: 14 }}>#{verified.tagLine.toUpperCase()}</span>
+                <span style={{ color: 'var(--text-dim)', fontSize: 13 }}>#{verified.tagLine.toUpperCase()}</span>
               </div>
               <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
                 {verified.tier && (

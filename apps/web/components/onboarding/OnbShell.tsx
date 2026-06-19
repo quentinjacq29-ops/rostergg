@@ -65,7 +65,7 @@ export default function OnbShell({ step, steps: stepsOverride, title, sub, child
     <div className="onb-shell" style={{ width: '100%', height: '100dvh', display: 'flex', background: 'var(--bg)', color: 'var(--text)', fontFamily: 'var(--font-body)', overflow: 'hidden' }}>
 
       {/* ── Left rail (desktop only) ── */}
-      <aside className="onb-rail" style={{ width: 340, flexShrink: 0, height: '100%', boxSizing: 'border-box', position: 'relative', overflow: 'hidden', background: 'linear-gradient(165deg, var(--surface), var(--void))', borderRight: '1px solid var(--line)', padding: '38px 32px', display: 'flex', flexDirection: 'column' }}>
+      <aside className="onb-rail" style={{ width: 340, flexShrink: 0, height: '100%', boxSizing: 'border-box', position: 'relative', overflow: 'hidden', background: 'linear-gradient(165deg, var(--surface), var(--void))', borderRight: '1px solid var(--line)', padding: '38px 32px', flexDirection: 'column' }}>
         <div style={{ position: 'absolute', top: -80, left: -60, width: 340, height: 340, background: 'radial-gradient(circle, rgba(0,224,255,0.11), transparent 65%)', filter: 'blur(40px)', pointerEvents: 'none' }} />
         <div style={{ position: 'absolute', bottom: -100, right: -80, width: 320, height: 320, background: 'radial-gradient(circle, rgba(139,92,246,0.11), transparent 65%)', filter: 'blur(40px)', pointerEvents: 'none' }} />
         <div style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 12, marginBottom: 36 }}>
@@ -97,7 +97,7 @@ export default function OnbShell({ step, steps: stepsOverride, title, sub, child
       <main className="onb-main" style={{ flex: 1, minWidth: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
 
         {/* Mobile topbar — masqué desktop, visible ≤880px */}
-        <header className="onb-topbar" style={{ display: 'none', alignItems: 'center', gap: 12, padding: '14px 18px', borderBottom: '1px solid var(--line)', background: 'rgba(10,12,20,0.9)', flexShrink: 0 }}>
+        <header className="onb-topbar" style={{ alignItems: 'center', gap: 12, padding: '14px 18px', borderBottom: '1px solid var(--line)', background: 'rgba(10,12,20,0.9)', flexShrink: 0 }}>
           <button
             onClick={handleBack}
             style={{ width: 38, height: 38, borderRadius: 11, background: 'rgba(255,255,255,0.05)', border: '1px solid var(--line)', color: 'var(--text)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 }}
@@ -111,19 +111,19 @@ export default function OnbShell({ step, steps: stepsOverride, title, sub, child
         </header>
 
         {/* Contenu scrollable */}
-        <div className="onb-scroll" style={{ flex: 1, overflowY: 'auto', display: 'flex', justifyContent: 'center', padding: '52px 60px', minHeight: 0 }}>
-          <div className="onb-content" style={{ width: '100%', maxWidth: 640 }}>
+        <div className="onb-scroll" style={{ flex: 1, overflowY: 'auto', display: 'flex', justifyContent: 'center', minHeight: 0 }}>
+          <div className="onb-content" style={{ width: '100%' }}>
             <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--cyan)', letterSpacing: '0.2em', marginBottom: 12 }}>
               ÉTAPE {String(step).padStart(2, '0')} / {String(total).padStart(2, '0')}
             </div>
-            <h1 style={{ margin: 0, fontFamily: 'var(--font-display)', fontSize: 42, lineHeight: 0.98, letterSpacing: '0.01em', color: 'var(--text)' }}>{title}</h1>
+            <h1 className="onb-title" style={{ margin: 0, fontFamily: 'var(--font-display)', lineHeight: 0.98, letterSpacing: '0.01em', color: 'var(--text)' }}>{title}</h1>
             {sub && <p style={{ marginTop: 14, fontSize: 15, color: 'var(--text-dim)', lineHeight: 1.6, maxWidth: 560 }}>{sub}</p>}
             <div style={{ marginTop: 30 }}>{children}</div>
           </div>
         </div>
 
         {/* Footer actions — sticky sur mobile */}
-        <footer className="onb-actions" style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '18px 60px', borderTop: '1px solid var(--line)', background: 'rgba(10,12,20,0.6)', flexShrink: 0 }}>
+        <footer className="onb-actions" style={{ display: 'flex', alignItems: 'center', gap: 14, borderTop: '1px solid var(--line)', background: 'rgba(10,12,20,0.6)', flexShrink: 0 }}>
           <button
             className="onb-actions-back"
             onClick={handleBack}

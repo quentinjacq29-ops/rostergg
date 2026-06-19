@@ -250,16 +250,16 @@ export default function OnbStep1Riot({ locale, step }: Props) {
           </div>
 
           <label style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--text-dim)', letterSpacing: '0.18em', display: 'block', marginTop: 22 }}>RIOT ID</label>
-          <div style={{ display: 'flex', gap: 10, marginTop: 12 }}>
-            <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 12, padding: '0 18px', height: 56, borderRadius: 13, background: 'rgba(255,255,255,0.04)', border: `1px solid ${gameName ? 'rgba(0,224,255,0.33)' : 'var(--line)'}`, boxShadow: gameName ? '0 0 0 3px rgba(0,224,255,0.08)' : 'none', transition: 'all 0.15s' }}>
-              <input type="text" value={gameName} onChange={e => { setGameName(e.target.value); setVerified(null); setError(null) }} onKeyDown={e => e.key === 'Enter' && handleVerify()} placeholder="NomInvocateur" style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', fontFamily: 'var(--font-display)', fontSize: 18, color: 'var(--text)', letterSpacing: '0.02em' }} />
+          <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+            <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 10, padding: '0 14px', height: 52, borderRadius: 13, background: 'rgba(255,255,255,0.04)', border: `1px solid ${gameName ? 'rgba(0,224,255,0.33)' : 'var(--line)'}`, boxShadow: gameName ? '0 0 0 3px rgba(0,224,255,0.08)' : 'none', transition: 'all 0.15s' }}>
+              <input type="text" value={gameName} onChange={e => { setGameName(e.target.value); setVerified(null); setError(null) }} onKeyDown={e => e.key === 'Enter' && handleVerify()} placeholder="NomInvocateur" style={{ flex: 1, minWidth: 0, background: 'transparent', border: 'none', outline: 'none', fontFamily: 'var(--font-display)', fontSize: 16, color: 'var(--text)', letterSpacing: '0.02em' }} />
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', padding: '0 18px', height: 56, borderRadius: 13, background: 'rgba(255,255,255,0.04)', border: '1px solid var(--line)', gap: 2 }}>
-              <span style={{ fontFamily: 'var(--font-display)', fontSize: 18, color: 'var(--text-dim)' }}>#</span>
-              <input type="text" value={tagLine} onChange={e => { setTagLine(e.target.value); setVerified(null); setError(null) }} onKeyDown={e => e.key === 'Enter' && handleVerify()} placeholder={platformLabel} maxLength={5} style={{ width: 64, background: 'transparent', border: 'none', outline: 'none', fontFamily: 'var(--font-display)', fontSize: 18, color: 'var(--text)', letterSpacing: '0.02em' }} />
+            <div style={{ display: 'flex', alignItems: 'center', padding: '0 10px', height: 52, borderRadius: 13, background: 'rgba(255,255,255,0.04)', border: '1px solid var(--line)', gap: 2, flexShrink: 0 }}>
+              <span style={{ fontFamily: 'var(--font-display)', fontSize: 16, color: 'var(--text-dim)' }}>#</span>
+              <input type="text" value={tagLine} onChange={e => { setTagLine(e.target.value); setVerified(null); setError(null) }} onKeyDown={e => e.key === 'Enter' && handleVerify()} placeholder={platformLabel} maxLength={5} style={{ width: 52, background: 'transparent', border: 'none', outline: 'none', fontFamily: 'var(--font-display)', fontSize: 16, color: 'var(--text)', letterSpacing: '0.02em' }} />
             </div>
-            <button onClick={handleVerify} disabled={loading || !gameName.trim() || !tagLine.trim()} style={{ height: 56, padding: '0 22px', borderRadius: 13, border: 'none', cursor: 'pointer', background: 'linear-gradient(135deg, var(--cyan), var(--violet))', color: '#001018', fontFamily: 'var(--font-display)', fontSize: 13, letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 700, opacity: loading || !gameName.trim() || !tagLine.trim() ? 0.5 : 1, flexShrink: 0 }}>
-              {loading ? '…' : 'Vérifier'}
+            <button onClick={handleVerify} disabled={loading || !gameName.trim() || !tagLine.trim()} style={{ height: 52, padding: '0 16px', borderRadius: 13, border: 'none', cursor: 'pointer', background: 'linear-gradient(135deg, var(--cyan), var(--violet))', color: '#001018', fontFamily: 'var(--font-display)', fontSize: 12, letterSpacing: '0.08em', textTransform: 'uppercase', fontWeight: 700, opacity: loading || !gameName.trim() || !tagLine.trim() ? 0.5 : 1, flexShrink: 0, whiteSpace: 'nowrap' }}>
+              {loading ? '…' : 'OK'}
             </button>
           </div>
 
@@ -292,9 +292,9 @@ export default function OnbStep1Riot({ locale, step }: Props) {
             <div style={{ width: 58, height: 58, borderRadius: '50%', flexShrink: 0, background: 'linear-gradient(135deg, var(--surface), var(--elevated))', border: '2px solid var(--live)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font-display)', fontSize: 20, color: 'var(--live)', boxShadow: '0 0 0 3px var(--bg), 0 0 14px rgba(0,255,157,0.3)' }}>
               {verified.gameName.slice(0, 2).toUpperCase()}
             </div>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontFamily: 'var(--font-display)', fontSize: 22, color: 'var(--text)', letterSpacing: '0.02em' }}>
-                {verified.gameName.toUpperCase()} <span style={{ color: 'var(--text-dim)', fontSize: 14 }}>#{verified.tagLine.toUpperCase()}</span>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontFamily: 'var(--font-display)', fontSize: 20, color: 'var(--text)', letterSpacing: '0.02em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {verified.gameName.toUpperCase()} <span style={{ color: 'var(--text-dim)', fontSize: 13 }}>#{verified.tagLine.toUpperCase()}</span>
               </div>
               <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
                 {verified.tier && (
@@ -330,7 +330,7 @@ export default function OnbStep1Riot({ locale, step }: Props) {
           <div style={{ display: 'flex', gap: 10, marginTop: 12 }}>
             {/* Input */}
             <div style={{
-              flex: 1, display: 'flex', alignItems: 'center', gap: 12, padding: '0 18px', height: 56, borderRadius: 13,
+              flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 12, padding: '0 14px', height: 52, borderRadius: 13,
               background: 'rgba(255,255,255,0.04)',
               border: `1px solid ${pseudoState === 'error' ? 'rgba(255,61,110,0.4)' : pseudoState === 'valid' ? 'rgba(0,224,255,0.4)' : 'var(--line)'}`,
               boxShadow: pseudoState === 'error' ? '0 0 0 3px rgba(255,61,110,0.08)' : pseudoState === 'valid' ? '0 0 0 3px rgba(0,224,255,0.08)' : 'none',
@@ -342,7 +342,7 @@ export default function OnbStep1Riot({ locale, step }: Props) {
                 onChange={e => onDisplayNameChange(e.target.value)}
                 placeholder="TonPseudo"
                 maxLength={20}
-                style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', fontFamily: 'var(--font-display)', fontSize: 19, color: 'var(--text)', letterSpacing: '0.02em' }}
+                style={{ flex: 1, minWidth: 0, background: 'transparent', border: 'none', outline: 'none', fontFamily: 'var(--font-display)', fontSize: 17, color: 'var(--text)', letterSpacing: '0.02em' }}
               />
               {/* Icône état */}
               {pseudoState === 'valid' && (
@@ -360,7 +360,7 @@ export default function OnbStep1Riot({ locale, step }: Props) {
             <button
               onClick={() => fetchSuggestion(verified.gameName)}
               disabled={rerolling}
-              style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '0 18px', height: 56, borderRadius: 13, cursor: 'pointer', background: 'rgba(255,255,255,0.04)', border: '1px solid var(--line-strong)', color: 'var(--text-dim)', fontFamily: 'var(--font-display)', fontSize: 13, letterSpacing: '0.08em', textTransform: 'uppercase', opacity: rerolling ? 0.5 : 1, flexShrink: 0, whiteSpace: 'nowrap' }}
+              style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '0 14px', height: 52, borderRadius: 13, cursor: 'pointer', background: 'rgba(255,255,255,0.04)', border: '1px solid var(--line-strong)', color: 'var(--text-dim)', fontFamily: 'var(--font-display)', fontSize: 12, letterSpacing: '0.06em', textTransform: 'uppercase', opacity: rerolling ? 0.5 : 1, flexShrink: 0, whiteSpace: 'nowrap' }}
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-dim)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M23 4v6h-6M1 20v-6h6" />
