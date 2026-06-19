@@ -51,7 +51,7 @@ export default function OnbStep2Langs({ locale, step, steps, onDone }: Props) {
       <label style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--text-dim)', letterSpacing: '0.18em' }}>
         SÉLECTIONNE TES LANGUES
       </label>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginTop: 14 }}>
+      <div className="onb-lang-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginTop: 14 }}>
         {LANGS.map(({ code, name }) => {
           const on = selected.includes(code)
           const c = LANG_COLORS[code] ?? 'var(--cyan)'

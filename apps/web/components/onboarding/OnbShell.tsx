@@ -6,7 +6,7 @@ import type { ReactNode } from 'react'
 
 type Props = {
   step: number
-  steps?: readonly string[]   // override ONB_STEPS for non-duo flows
+  steps?: readonly string[]
   title: string
   sub?: string
   children: ReactNode
@@ -18,7 +18,6 @@ type Props = {
   locale: string
 }
 
-// Step dot in left rail
 function RailDot({ n, label, state }: { n: number; label: string; state: 'done' | 'active' | 'todo' }) {
   const done = state === 'done'
   const active = state === 'active'
@@ -60,13 +59,15 @@ export default function OnbShell({ step, steps: stepsOverride, title, sub, child
     else router.push('/duo')
   }
 
+  const pct = `${(step / total) * 100}%`
+
   return (
     <div className="onb-shell" style={{ width: '100%', height: '100dvh', display: 'flex', background: 'var(--bg)', color: 'var(--text)', fontFamily: 'var(--font-body)', overflow: 'hidden' }}>
-      {/* ── Left rail ── */}
+
+      {/* ── Left rail (desktop only) ── */}
       <aside className="onb-rail" style={{ width: 340, flexShrink: 0, height: '100%', boxSizing: 'border-box', position: 'relative', overflow: 'hidden', background: 'linear-gradient(165deg, var(--surface), var(--void))', borderRight: '1px solid var(--line)', padding: '38px 32px', display: 'flex', flexDirection: 'column' }}>
         <div style={{ position: 'absolute', top: -80, left: -60, width: 340, height: 340, background: 'radial-gradient(circle, rgba(0,224,255,0.11), transparent 65%)', filter: 'blur(40px)', pointerEvents: 'none' }} />
         <div style={{ position: 'absolute', bottom: -100, right: -80, width: 320, height: 320, background: 'radial-gradient(circle, rgba(139,92,246,0.11), transparent 65%)', filter: 'blur(40px)', pointerEvents: 'none' }} />
-        {/* Logo */}
         <div style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 12, marginBottom: 36 }}>
           <div style={{ width: 40, height: 40, borderRadius: 11, background: 'linear-gradient(150deg, var(--surface), var(--void))', boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.1), 0 0 20px rgba(0,224,255,0.27)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <svg width="26" height="26" viewBox="0 0 48 48" fill="none">
@@ -79,7 +80,6 @@ export default function OnbShell({ step, steps: stepsOverride, title, sub, child
             ROSTER<span style={{ color: 'var(--cyan)' }}>GG</span>
           </div>
         </div>
-        {/* Steps */}
         <div style={{ position: 'relative', fontFamily: 'var(--font-mono)', fontSize: 9.5, color: 'var(--text-dim)', letterSpacing: '0.24em', marginBottom: 18 }}>◢ CRÉATION DU PROFIL</div>
         <div className="onb-steplist" style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: 13 }}>
           {displaySteps.map((label, i) => (
@@ -87,42 +87,70 @@ export default function OnbShell({ step, steps: stepsOverride, title, sub, child
           ))}
         </div>
         <div className="onb-railspace" style={{ flex: 1 }} />
-        {/* Progress bar */}
         <div style={{ position: 'relative', height: 4, borderRadius: 4, background: 'rgba(255,255,255,0.07)', overflow: 'hidden' }}>
-          <div style={{ width: `${(step / total) * 100}%`, height: '100%', borderRadius: 4, background: 'linear-gradient(90deg, var(--cyan), var(--violet))', boxShadow: '0 0 10px var(--cyan)', transition: 'width 0.4s ease' }} />
+          <div style={{ width: pct, height: '100%', borderRadius: 4, background: 'linear-gradient(90deg, var(--cyan), var(--violet))', boxShadow: '0 0 10px var(--cyan)', transition: 'width 0.4s ease' }} />
         </div>
         <div style={{ position: 'relative', fontFamily: 'var(--font-mono)', fontSize: 9.5, color: 'var(--text-mute)', letterSpacing: '0.14em', marginTop: 10 }}>{step} / {total} · ~2 MIN</div>
       </aside>
 
-      {/* ── Right content ── */}
-      <main className="onb-main" style={{ flex: 1, minWidth: 0, height: '100%', overflowY: 'auto', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '52px 60px' }}>
-        <div className="onb-content" style={{ width: '100%', maxWidth: 640 }}>
-          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--cyan)', letterSpacing: '0.2em', marginBottom: 12 }}>
-            ÉTAPE {String(step).padStart(2, '0')} / {String(total).padStart(2, '0')}
+      {/* ── Main ── */}
+      <main className="onb-main" style={{ flex: 1, minWidth: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
+
+        {/* Mobile topbar — masqué desktop, visible ≤880px */}
+        <header className="onb-topbar" style={{ display: 'none', alignItems: 'center', gap: 12, padding: '14px 18px', borderBottom: '1px solid var(--line)', background: 'rgba(10,12,20,0.9)', flexShrink: 0 }}>
+          <button
+            onClick={handleBack}
+            style={{ width: 38, height: 38, borderRadius: 11, background: 'rgba(255,255,255,0.05)', border: '1px solid var(--line)', color: 'var(--text)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 }}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6" /></svg>
+          </button>
+          <div style={{ flex: 1, height: 5, borderRadius: 5, background: 'rgba(255,255,255,0.08)', overflow: 'hidden' }}>
+            <div style={{ width: pct, height: '100%', borderRadius: 5, background: 'linear-gradient(90deg, var(--cyan), var(--violet))', transition: 'width .35s' }} />
           </div>
-          <h1 style={{ margin: 0, fontFamily: 'var(--font-display)', fontSize: 42, lineHeight: 0.98, letterSpacing: '0.01em', color: 'var(--text)' }}>{title}</h1>
-          {sub && <p style={{ marginTop: 14, fontSize: 15, color: 'var(--text-dim)', lineHeight: 1.6, maxWidth: 560 }}>{sub}</p>}
-          <div style={{ marginTop: 30 }}>{children}</div>
-          {/* Footer CTA */}
-          <div className="onb-footer" style={{ display: 'flex', alignItems: 'center', gap: 14, marginTop: 34 }}>
-            <button onClick={handleBack} disabled={step === 1} style={{ padding: '15px 24px', borderRadius: 12, background: 'transparent', border: '1px solid var(--line-strong)', color: step === 1 ? 'var(--text-mute)' : 'var(--text-dim)', fontFamily: 'var(--font-display)', fontSize: 13, letterSpacing: '0.1em', textTransform: 'uppercase', cursor: step === 1 ? 'default' : 'pointer', opacity: step === 1 ? 0.4 : 1 }}>
-              Retour
-            </button>
-            <button
-              onClick={handleContinue}
-              disabled={continueDisabled || loading}
-              style={{ padding: '15px 28px', borderRadius: 12, border: 'none', background: continueDisabled ? 'rgba(255,255,255,0.08)' : `linear-gradient(135deg, ${continueAccent}, var(--violet))`, color: continueDisabled ? 'var(--text-mute)' : '#001018', fontFamily: 'var(--font-display)', fontSize: 13, letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 700, cursor: continueDisabled ? 'not-allowed' : 'pointer', display: 'inline-flex', alignItems: 'center', gap: 8, boxShadow: continueDisabled ? 'none' : `0 8px 24px -10px ${continueAccent}` }}
-            >
-              {loading ? 'Chargement…' : continueLabel}
-              {!loading && !continueDisabled && (
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#001018" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
-              )}
-            </button>
-            <span onClick={handleSkip} style={{ marginLeft: 'auto', fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text-mute)', letterSpacing: '0.08em', cursor: 'pointer' }}>
-              {step === 1 ? 'Déjà connecté ✓' : 'Passer'}
-            </span>
+          <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text-dim)', letterSpacing: '0.06em', whiteSpace: 'nowrap' }}>{step}/{total}</span>
+        </header>
+
+        {/* Contenu scrollable */}
+        <div className="onb-scroll" style={{ flex: 1, overflowY: 'auto', display: 'flex', justifyContent: 'center', padding: '52px 60px', minHeight: 0 }}>
+          <div className="onb-content" style={{ width: '100%', maxWidth: 640 }}>
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--cyan)', letterSpacing: '0.2em', marginBottom: 12 }}>
+              ÉTAPE {String(step).padStart(2, '0')} / {String(total).padStart(2, '0')}
+            </div>
+            <h1 style={{ margin: 0, fontFamily: 'var(--font-display)', fontSize: 42, lineHeight: 0.98, letterSpacing: '0.01em', color: 'var(--text)' }}>{title}</h1>
+            {sub && <p style={{ marginTop: 14, fontSize: 15, color: 'var(--text-dim)', lineHeight: 1.6, maxWidth: 560 }}>{sub}</p>}
+            <div style={{ marginTop: 30 }}>{children}</div>
           </div>
         </div>
+
+        {/* Footer actions — sticky sur mobile */}
+        <footer className="onb-actions" style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '18px 60px', borderTop: '1px solid var(--line)', background: 'rgba(10,12,20,0.6)', flexShrink: 0 }}>
+          <button
+            className="onb-actions-back"
+            onClick={handleBack}
+            disabled={step === 1}
+            style={{ padding: '15px 24px', borderRadius: 12, background: 'transparent', border: '1px solid var(--line-strong)', color: step === 1 ? 'var(--text-mute)' : 'var(--text-dim)', fontFamily: 'var(--font-display)', fontSize: 13, letterSpacing: '0.1em', textTransform: 'uppercase', cursor: step === 1 ? 'default' : 'pointer', opacity: step === 1 ? 0.4 : 1 }}
+          >
+            Retour
+          </button>
+          <button
+            className="onb-actions-cont"
+            onClick={handleContinue}
+            disabled={continueDisabled || loading}
+            style={{ padding: '15px 28px', borderRadius: 12, border: 'none', background: continueDisabled ? 'rgba(255,255,255,0.08)' : `linear-gradient(135deg, ${continueAccent}, var(--violet))`, color: continueDisabled ? 'var(--text-mute)' : '#001018', fontFamily: 'var(--font-display)', fontSize: 13, letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 700, cursor: continueDisabled ? 'not-allowed' : 'pointer', display: 'inline-flex', alignItems: 'center', gap: 8, boxShadow: continueDisabled ? 'none' : `0 8px 24px -10px ${continueAccent}` }}
+          >
+            {loading ? 'Chargement…' : continueLabel}
+            {!loading && !continueDisabled && (
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#001018" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
+            )}
+          </button>
+          <span
+            className="onb-actions-skip"
+            onClick={handleSkip}
+            style={{ marginLeft: 'auto', fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text-mute)', letterSpacing: '0.08em', cursor: 'pointer' }}
+          >
+            {step === 1 ? 'Déjà connecté ✓' : 'Passer'}
+          </span>
+        </footer>
       </main>
     </div>
   )
