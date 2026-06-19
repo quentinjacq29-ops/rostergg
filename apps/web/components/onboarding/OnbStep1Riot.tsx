@@ -134,8 +134,11 @@ export default function OnbStep1Riot({ locale, step }: Props) {
   }
 
   async function handleContinue() {
+    if (mode === 'rso') {
+      router.push('/onboarding/2')
+      return
+    }
     if (!displayName.trim() || pseudoState !== 'valid') return
-    // Persiste le displayName
     await fetch('/api/onboarding', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -145,8 +148,20 @@ export default function OnbStep1Riot({ locale, step }: Props) {
     router.push('/onboarding/2')
   }
 
+  // Auto-verify dès que les deux champs sont remplis (mode manual)
+  const autoVerifyRef = useRef<ReturnType<typeof setTimeout>>()
+  useEffect(() => {
+    if (mode !== 'manual') return
+    if (!gameName.trim() || !tagLine.trim()) return
+    clearTimeout(autoVerifyRef.current)
+    autoVerifyRef.current = setTimeout(handleVerify, 600)
+    return () => clearTimeout(autoVerifyRef.current)
+  }, [gameName, tagLine, mode]) // eslint-disable-line react-hooks/exhaustive-deps
+
   const platformLabel = PLATFORM_LABELS[platform] ?? 'TAG'
-  const continueDisabled = !verified || pseudoState !== 'valid'
+  const continueDisabled = mode === 'rso'
+    ? false
+    : !verified || pseudoState !== 'valid'
 
   return (
     <OnbShell
@@ -197,7 +212,7 @@ export default function OnbStep1Riot({ locale, step }: Props) {
                 <div style={{ fontFamily: 'var(--font-body)', fontSize: 12.5, color: 'var(--text-dim)', marginTop: 3, lineHeight: 1.45 }}>Tu te connectes sur la page de Riot. RosterGG ne voit jamais ton mot de passe.</div>
               </div>
             </div>
-            <button style={{ width: '100%', marginTop: 16, padding: 15, borderRadius: 12, border: 'none', cursor: 'pointer', background: 'linear-gradient(135deg, var(--cyan), var(--violet))', color: '#001018', fontFamily: 'var(--font-display)', fontSize: 14, letterSpacing: '0.08em', textTransform: 'uppercase', fontWeight: 700, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
+            <button onClick={handleContinue} style={{ width: '100%', marginTop: 16, padding: 15, borderRadius: 12, border: 'none', cursor: 'pointer', background: 'linear-gradient(135deg, var(--cyan), var(--violet))', color: '#001018', fontFamily: 'var(--font-display)', fontSize: 14, letterSpacing: '0.08em', textTransform: 'uppercase', fontWeight: 700, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
               <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#001018" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6z" /></svg>
               Continuer avec Riot
             </button>
