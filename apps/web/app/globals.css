@@ -179,13 +179,23 @@
   .landing-footer-disc { margin-left: 0 !important; text-align: left !important; }
 }
 @media (max-width: 680px) {
-  .landing-nav-links, .landing-nav-guest, .landing-nav-auth { display: none !important; }
+  /* Nav : masquer liens, lang, explorer; réduire padding */
+  .landing-nav-links, .landing-nav-guest, .landing-nav-lang { display: none !important; }
   .landing-nav { padding: 14px 20px !important; gap: 12px !important; }
-  .landing-hero { padding: 44px 20px 56px !important; }
+  /* Connexion Riot : icône seule, masquer le texte */
+  .riot-label { display: none !important; }
+  .landing-btn-riot { padding: 11px 16px !important; }
+  /* Hero */
+  .landing-hero { padding: 40px 20px 56px !important; }
   .landing-hero-cta { gap: 12px !important; flex-wrap: wrap !important; }
   .landing-hero-cta a, .landing-hero-cta button { width: 100% !important; justify-content: center !important; }
+  /* Floating chips : rabattre à l'intérieur du hero */
+  .landing-float-a { left: 0 !important; top: 14px !important; }
+  .landing-float-b { right: 0 !important; bottom: 30px !important; }
+  /* Final CTA */
   .landing-final-cta-btns { flex-direction: column !important; align-items: stretch !important; }
   .landing-final-cta-btns a { text-align: center !important; }
+  /* Footer */
   .landing-footer-grid { grid-template-columns: 1fr !important; }
 }
 

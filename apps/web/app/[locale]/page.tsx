@@ -74,11 +74,11 @@ function HeroVisual() {
         </div>
       </div>
       {/* Floating chips */}
-      <div style={{ position: 'absolute', top: 30, left: -46, padding: '8px 13px', borderRadius: 11, background: 'var(--surface)', border: '1px solid rgba(0,224,255,0.33)', boxShadow: '0 12px 30px -10px rgba(0,224,255,0.4)', display: 'flex', alignItems: 'center', gap: 7 }}>
+      <div className="landing-float-a" style={{ position: 'absolute', top: 30, left: -46, padding: '8px 13px', borderRadius: 11, background: 'var(--surface)', border: '1px solid rgba(0,224,255,0.33)', boxShadow: '0 12px 30px -10px rgba(0,224,255,0.4)', display: 'flex', alignItems: 'center', gap: 7 }}>
         <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--cyan)', display: 'inline-block' }} />
         <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--text)', letterSpacing: '0.08em' }}>94% MATCH</span>
       </div>
-      <div style={{ position: 'absolute', bottom: 60, right: -40, padding: '8px 13px', borderRadius: 11, background: 'var(--surface)', border: '1px solid rgba(139,92,246,0.33)', boxShadow: '0 12px 30px -10px rgba(139,92,246,0.4)', display: 'flex', alignItems: 'center', gap: 7 }}>
+      <div className="landing-float-b" style={{ position: 'absolute', bottom: 60, right: -40, padding: '8px 13px', borderRadius: 11, background: 'var(--surface)', border: '1px solid rgba(139,92,246,0.33)', boxShadow: '0 12px 30px -10px rgba(139,92,246,0.4)', display: 'flex', alignItems: 'center', gap: 7 }}>
         <RoleIcon role="JNG" size={13} active />
         <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--text)', letterSpacing: '0.08em' }}>JUNGLE DISPO</span>
       </div>

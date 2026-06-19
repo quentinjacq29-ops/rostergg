@@ -30,6 +30,7 @@ export default function PublicNav() {
           </span>
         </Link>
 
+        {/* Liens desktop — masqués ≤680px */}
         <div className="landing-nav-links" style={{ display: 'flex', gap: 26, marginLeft: 20 }}>
           {['Duo', 'Équipes', 'Coaching'].map(l => (
             <span key={l} style={{ fontFamily: 'var(--font-body)', fontSize: 14, color: 'var(--text-dim)', cursor: 'pointer', fontWeight: 500 }}>{l}</span>
@@ -37,22 +38,28 @@ export default function PublicNav() {
         </div>
 
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 14 }}>
-          <LanguageSwitcher />
-          <Link className="landing-nav-guest" href="/onboarding/1" style={{ display: 'inline-flex', alignItems: 'center', gap: 7, fontFamily: 'var(--font-body)', fontSize: 14, color: 'var(--text-dim)', textDecoration: 'none', fontWeight: 500 }}>
+          {/* Globe langue — masqué ≤680px */}
+          <span className="landing-nav-lang" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
+            <LanguageSwitcher />
+          </span>
+
+          {/* Explorer sans compte — masqué ≤680px */}
+          <Link className="landing-nav-guest" href="/onboarding/1" style={{ display: 'inline-flex', alignItems: 'center', gap: 7, fontFamily: 'var(--font-body)', fontSize: 14, color: 'var(--text-dim)', textDecoration: 'none', fontWeight: 500, whiteSpace: 'nowrap' }}>
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--cyan)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z" /><circle cx="12" cy="12" r="3" />
             </svg>
             Explorer sans compte
           </Link>
-          <Link href="/login" className="landing-nav-auth" style={{ fontFamily: 'var(--font-body)', fontSize: 14, color: 'var(--text)', textDecoration: 'none', fontWeight: 500, whiteSpace: 'nowrap' }}>
-            Se connecter
-          </Link>
-          <Link href="/onboarding/1" className="landing-nav-auth" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '11px 22px', borderRadius: 11, background: 'linear-gradient(135deg, var(--cyan), var(--violet))', color: '#001018', fontFamily: 'var(--font-display)', fontSize: 13, letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 700, boxShadow: '0 10px 26px -10px var(--cyan)', textDecoration: 'none' }}>
+
+          {/* Connexion Riot — icône seule ≤680px (.riot-label masqué) */}
+          <Link href="/onboarding/1" className="landing-btn-riot" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '11px 22px', borderRadius: 11, background: 'linear-gradient(135deg, var(--cyan), var(--violet))', color: '#001018', fontFamily: 'var(--font-display)', fontSize: 13, letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 700, boxShadow: '0 10px 26px -10px var(--cyan)', textDecoration: 'none', whiteSpace: 'nowrap' }}>
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#001018" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
               <path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6z" />
             </svg>
-            Connexion Riot
+            <span className="riot-label">Connexion Riot</span>
           </Link>
+
+          {/* Hamburger — visible ≤680px */}
           <button
             className="landing-hamb"
             onClick={() => setOpen(o => !o)}
@@ -67,21 +74,14 @@ export default function PublicNav() {
         </div>
       </nav>
 
+      {/* Menu mobile (hamburger) */}
       <div className={`landing-mobile-menu${open ? ' open' : ''}`} style={{ padding: '0 24px 16px' }}>
         {['Duo', 'Équipes', 'Coaching'].map(l => (
           <span key={l} onClick={() => setOpen(false)} style={{ padding: '13px 4px', fontSize: 16, color: 'var(--text-dim)', borderBottom: '1px solid var(--line)', display: 'block', cursor: 'pointer' }}>{l}</span>
         ))}
-        <Link href="/login" onClick={() => setOpen(false)} style={{ padding: '13px 4px', fontSize: 16, color: 'var(--text-dim)', borderBottom: '1px solid var(--line)', display: 'block', textDecoration: 'none' }}>
-          Se connecter
+        <Link href="/onboarding/1" onClick={() => setOpen(false)} style={{ padding: '13px 4px', fontSize: 16, color: 'var(--text-dim)', borderBottom: '1px solid var(--line)', display: 'block', textDecoration: 'none' }}>
+          Explorer sans compte
         </Link>
-        <div style={{ paddingTop: 16 }}>
-          <Link href="/onboarding/1" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '14px 22px', borderRadius: 11, background: 'linear-gradient(135deg, var(--cyan), var(--violet))', color: '#001018', fontFamily: 'var(--font-display)', fontSize: 13, letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 700, textDecoration: 'none' }}>
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#001018" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6z" />
-            </svg>
-            Continuer avec Riot
-          </Link>
-        </div>
       </div>
     </>
   )
