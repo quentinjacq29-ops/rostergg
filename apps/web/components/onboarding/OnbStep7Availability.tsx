@@ -78,54 +78,43 @@ export default function OnbStep7Availability({ locale, step, steps, onDone }: Pr
         CETTE SEMAINE · FUSEAU EUROPE/PARIS
       </label>
 
-      <div style={{ marginTop: 14, padding: 20, borderRadius: 16, background: 'rgba(255,255,255,0.025)', border: '1px solid var(--line)' }}>
-        {/* Row labels + grid */}
-        <div style={{ display: 'flex', gap: 0 }}>
-          {/* Slot labels column */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 5, marginRight: 8, paddingTop: 0 }}>
-            {SLOTS.map((s, i) => (
-              <div key={i} style={{
-                height: 22, display: 'flex', alignItems: 'center',
-                fontFamily: 'var(--font-mono)', fontSize: 8.5, color: 'var(--text-mute)', letterSpacing: '0.06em',
-                minWidth: 24, justifyContent: 'flex-end',
-              }}>
-                {s}
-              </div>
-            ))}
-          </div>
-
-          {/* Day columns */}
-          <div style={{ flex: 1, display: 'flex', gap: 6 }}>
-            {grid.map((col, di) => (
-              <div key={di} style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 5, alignItems: 'center' }}>
-                {col.map((v, si) => (
-                  <div
-                    key={si}
-                    onClick={() => handleCell(di, si)}
-                    title={`${DAYS[di]} ${SLOTS[si]} — intensité ${v}`}
-                    style={{
-                      width: '100%', height: 22, borderRadius: 4, cursor: 'pointer',
-                      background: heatColor(v),
-                      border: `1px solid ${heatBorder(v)}`,
-                      transition: 'background 0.15s, border-color 0.15s',
-                    }}
-                  />
-                ))}
-                <span style={{ fontFamily: 'var(--font-mono)', fontSize: 8.5, color: 'var(--text-mute)', letterSpacing: '0.08em', marginTop: 3 }}>
-                  {DAYS[di]}
-                </span>
-              </div>
-            ))}
-          </div>
+      <div style={{ marginTop: 14, padding: '18px 16px', borderRadius: 16, background: 'rgba(255,255,255,0.025)', border: '1px solid var(--line)' }}>
+        {/* CSS grid : 44px labels + 7 colonnes égales — tient à 390px */}
+        <div style={{ display: 'grid', gridTemplateColumns: '44px repeat(7, 1fr)', gap: 4, width: '100%' }}>
+          {/* En-têtes jours (ligne 0) */}
+          <div /> {/* coin vide */}
+          {DAYS.map(d => (
+            <div key={d} style={{ fontFamily: 'var(--font-mono)', fontSize: 9.5, color: 'var(--text-mute)', letterSpacing: '0.02em', textAlign: 'center', paddingBottom: 4 }}>{d}</div>
+          ))}
+          {/* Lignes : label créneau + 7 cellules */}
+          {SLOTS.map((slot, si) => (
+            <>
+              <div key={`lbl-${si}`} style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--text-mute)', display: 'flex', alignItems: 'center', letterSpacing: '0.02em' }}>{slot}</div>
+              {grid.map((col, di) => (
+                <div
+                  key={`${di}-${si}`}
+                  onClick={() => handleCell(di, si)}
+                  title={`${DAYS[di]} ${slot} — intensité ${col[si]}`}
+                  style={{
+                    aspectRatio: '1', maxHeight: 34, borderRadius: 6, cursor: 'pointer',
+                    background: heatColor(col[si]),
+                    border: `1px solid ${heatBorder(col[si])}`,
+                    transition: 'background 0.15s, border-color 0.15s',
+                  }}
+                />
+              ))}
+            </>
+          ))}
         </div>
 
         {/* Legend */}
-        <div style={{ marginTop: 14, display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'flex-end' }}>
-          <span style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--text-mute)' }}>MOINS</span>
+        <div style={{ marginTop: 14, display: 'flex', alignItems: 'center', gap: 7, fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--text-mute)', letterSpacing: '0.06em' }}>
+          <span>Moins</span>
           {LEGEND.map(v => (
-            <span key={v} style={{ width: 12, height: 12, borderRadius: 3, background: heatColor(v), border: '1px solid var(--line)', display: 'inline-block' }} />
+            <span key={v} style={{ width: 14, height: 14, borderRadius: 4, background: heatColor(v), display: 'inline-block', flexShrink: 0 }} />
           ))}
-          <span style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--text-mute)' }}>PLUS</span>
+          <span>Plus</span>
+          <span style={{ marginLeft: 'auto' }}>Tape pour ajuster</span>
         </div>
       </div>
 

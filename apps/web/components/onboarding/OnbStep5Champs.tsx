@@ -159,7 +159,7 @@ export default function OnbStep5Champs({ locale, step, steps, onDone }: Props) {
       </label>
 
       {/* Champion grid */}
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 14, maxHeight: 340, overflowY: 'auto', paddingRight: 4 }}>
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 14 }}>
         {filtered.map(c => {
           const on = currentPool.includes(c.id)
           const color = CHAMP_CLASS_COLORS[c.cls] ?? '#9aa2bf'
