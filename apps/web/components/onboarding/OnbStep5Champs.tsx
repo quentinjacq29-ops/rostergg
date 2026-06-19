@@ -173,7 +173,7 @@ export default function OnbStep5Champs({ locale, step, steps, onDone }: Props) {
                 </div>
                 {showImg && (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={`/api/champions/icon/${c.id}`} alt={c.name} width={58} height={58} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', position: 'relative', zIndex: 1 }} onError={() => markImgFailed(c.id)} />
+                  <img src={`/api/champions/icon/${c.id}`} alt={c.name} width={58} height={58} loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', position: 'relative', zIndex: 1 }} onError={() => markImgFailed(c.id)} />
                 )}
               </div>
               <div style={{ fontFamily: 'var(--font-mono)', fontSize: 7.5, color: on ? color : 'var(--text-mute)', textAlign: 'center', letterSpacing: '0.04em', maxWidth: 58, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.name}</div>

@@ -60,7 +60,7 @@ export default function OnbStep7Availability({ locale, step, steps, onDone }: Pr
     if (onDone) { onDone(); return }
     const intent = typeof window !== 'undefined' ? localStorage.getItem('onb_intent') : null
     const dest = intent === 'team' ? '/teams' : '/duo'
-    router.push(`/onboarding/finish?dest=${dest}`)
+    router.push(dest)
   }
 
   const LEGEND = [0, 1, 2, 3]

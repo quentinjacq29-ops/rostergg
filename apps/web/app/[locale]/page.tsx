@@ -89,7 +89,7 @@ function HeroVisual() {
 // ─── Sections ────────────────────────────────────────────────────────────────
 function LHero() {
   return (
-    <header style={{ position: 'relative', overflow: 'hidden', padding: '80px 40px 90px' }}>
+    <header className="landing-hero" style={{ position: 'relative', overflow: 'hidden', padding: '80px 40px 90px' }}>
       <div style={{ position: 'absolute', top: -120, left: '8%', width: 600, height: 500, background: 'radial-gradient(circle, rgba(139,92,246,0.11), transparent 60%)', filter: 'blur(50px)', pointerEvents: 'none' }} />
       <div style={{ position: 'absolute', top: 40, right: 0, width: 620, height: 540, background: 'radial-gradient(circle, rgba(0,224,255,0.09), transparent 60%)', filter: 'blur(50px)', pointerEvents: 'none' }} />
       <div className="landing-hero-inner" style={{ position: 'relative', maxWidth: 1240, margin: '0 auto', display: 'flex', alignItems: 'center', gap: 70 }}>

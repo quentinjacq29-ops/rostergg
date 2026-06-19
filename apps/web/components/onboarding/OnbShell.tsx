@@ -61,7 +61,7 @@ export default function OnbShell({ step, steps: stepsOverride, title, sub, child
   }
 
   return (
-    <div className="onb-shell" style={{ width: '100%', height: '100%', display: 'flex', background: 'var(--bg)', color: 'var(--text)', fontFamily: 'var(--font-body)', overflow: 'hidden' }}>
+    <div className="onb-shell" style={{ width: '100%', height: '100dvh', display: 'flex', background: 'var(--bg)', color: 'var(--text)', fontFamily: 'var(--font-body)', overflow: 'hidden' }}>
       {/* ── Left rail ── */}
       <aside className="onb-rail" style={{ width: 340, flexShrink: 0, height: '100%', boxSizing: 'border-box', position: 'relative', overflow: 'hidden', background: 'linear-gradient(165deg, var(--surface), var(--void))', borderRight: '1px solid var(--line)', padding: '38px 32px', display: 'flex', flexDirection: 'column' }}>
         <div style={{ position: 'absolute', top: -80, left: -60, width: 340, height: 340, background: 'radial-gradient(circle, rgba(0,224,255,0.11), transparent 65%)', filter: 'blur(40px)', pointerEvents: 'none' }} />
