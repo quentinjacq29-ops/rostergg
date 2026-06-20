@@ -36,3 +36,11 @@ Thumbs.db
 
 # Sentry
 .sentryclirc
+
+# Logs
+*.log
+dev.log
+dev-server.log
+
+# Build info
+*.tsbuildinfo
