@@ -1,4 +1,4 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import type { ReactNode } from 'react'
 import '@fontsource/anton/400.css'
 import '@fontsource/space-grotesk/400.css'
@@ -14,7 +14,6 @@ export const metadata: Metadata = {
   title: { default: 'RosterGG', template: '%s · RosterGG' },
   description: 'Trouve ton duo, ta team, ton coach sur League of Legends.',
   manifest: '/site.webmanifest',
-  themeColor: '#06070b',
   icons: {
     icon: [
       { url: '/favicon.ico', sizes: 'any' },
@@ -22,6 +21,10 @@ export const metadata: Metadata = {
     ],
     apple: '/apple-icon.png',
   },
+}
+
+export const viewport: Viewport = {
+  themeColor: '#06070b',
 }
 
 export default function RootLayout({ children }: { children: ReactNode }) {
