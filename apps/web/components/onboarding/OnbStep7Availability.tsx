@@ -58,9 +58,10 @@ export default function OnbStep7Availability({ locale, step, steps, onDone }: Pr
     // Store availability for the saving page
     if (typeof window !== 'undefined') localStorage.setItem('onb_availability', JSON.stringify(rows))
     if (onDone) { onDone(); return }
+    // Auth (email magic link) → callback → /onboarding/saving (sauvegarde + écran de fin) → dest
     const intent = typeof window !== 'undefined' ? localStorage.getItem('onb_intent') : null
     const dest = intent === 'team' ? '/teams' : '/duo'
-    router.push(dest)
+    router.push(`/onboarding/finish?dest=${encodeURIComponent(dest)}`)
   }
 
   const LEGEND = [0, 1, 2, 3]
