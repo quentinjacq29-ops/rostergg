@@ -41,12 +41,12 @@ export const ONB_STEPS = [
   'Disponibilités',
 ] as const
 
-// v2 — parcours DUO 7 étapes (Style de jeu retiré)
+// v2 — parcours DUO 7 étapes (Style de jeu fusionné dans « Rôle & style »)
 export const ONB_STEPS_V2 = [
   'Compte Riot',
   'Tu cherches quoi',
   'Langues',
-  'Rôle principal',
+  'Rôle & style',
   'Rôle recherché',
   'Champion pool',
   'Disponibilités',

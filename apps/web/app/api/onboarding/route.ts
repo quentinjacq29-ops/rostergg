@@ -11,12 +11,12 @@ type OnboardingBody = {
 //   step 1  → displayName (pseudo public)
 //   step 2  → intent (pas de write DB, crée la ligne matching_prefs)
 //   step 3  → languages
-//   step 4  → main_role + secondary_role → main_roles[]
+//   step 4  → main_role + secondary_role → main_roles[] + playstyles[] + goals[] (fusion « Rôle & style »)
 //   step 5  → looking_for_roles[]
 //   step 6  → champion_pool { [role]: string[] }
 //   step 7  → availability rows
 //
-// SUPPRIMÉ v2 : step 7 (playstyles/goals) — déplacé vers édition de profil (me.jsx)
+// v2 : playstyles/goals saisis à l'étape 04 (« Rôle & style ») — éditables ensuite dans /me
 
 export async function POST(request: NextRequest) {
   const cookieStore = await cookies()
@@ -67,12 +67,12 @@ export async function POST(request: NextRequest) {
         break
       }
       case 4: {
-        const { main_role, secondary_role } = data as { main_role: string; secondary_role: string | null }
+        const { main_role, secondary_role, playstyles, goals } = data as { main_role: string; secondary_role: string | null; playstyles?: string[]; goals?: string[] }
         const main_roles = ([main_role, secondary_role]).filter(Boolean) as string[]
-        await supabase.from('matching_prefs').upsert(
-          { profile_id: user.id, main_roles },
-          { onConflict: 'profile_id' }
-        )
+        const prefs: Record<string, unknown> = { profile_id: user.id, main_roles }
+        if (playstyles !== undefined) prefs.playstyles = playstyles
+        if (goals !== undefined) prefs.goals = goals
+        await supabase.from('matching_prefs').upsert(prefs, { onConflict: 'profile_id' })
         break
       }
       case 5: {

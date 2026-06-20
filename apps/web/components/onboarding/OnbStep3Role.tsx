@@ -31,12 +31,27 @@ export function RoleGrid({ selected, onSelect, accent = 'var(--cyan)' }: { selec
   )
 }
 
+// Style de jeu + Objectif — fusionnés ici depuis l'ex-étape « Style de jeu » (v2)
+const STYLES: Array<{ label: string; color: string }> = [
+  { label: 'Tryhard',   color: 'var(--rose)' },
+  { label: 'Roaming',   color: 'var(--cyan)' },
+  { label: 'Vocal',     color: 'var(--cyan)' },
+  { label: 'Scaling',   color: 'var(--cyan)' },
+  { label: 'Aggro',     color: 'var(--cyan)' },
+  { label: 'Chill',     color: 'var(--cyan)' },
+  { label: 'Macro',     color: 'var(--cyan)' },
+  { label: 'Teamfight', color: 'var(--cyan)' },
+]
+const GOALS = ['Climb', 'Clash', 'Flex', 'Semi-pro']
+
 type Props = { locale: string; step: number; steps?: readonly string[]; onDone?: () => void }
 
 export default function OnbStep3Role({ locale, step, steps, onDone }: Props) {
   const [mainRole, setMainRole] = useState('MID')
   const [flexOn, setFlexOn] = useState(false)
   const [secondary, setSecondary] = useState<string | null>(null)
+  const [styles, setStyles] = useState<string[]>(['Tryhard', 'Roaming', 'Vocal'])
+  const [goals, setGoals] = useState<string[]>(['Climb', 'Clash'])
   const [hasPrefill, setHasPrefill] = useState(false)
   const router = useRouter()
 
@@ -58,15 +73,25 @@ export default function OnbStep3Role({ locale, step, steps, onDone }: Props) {
     setSecondary(prev => prev === r ? null : r)
   }
 
+  function toggleStyle(s: string) {
+    setStyles(prev => prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s])
+  }
+  function toggleGoal(g: string) {
+    setGoals(prev => prev.includes(g) ? prev.filter(x => x !== g) : [...prev, g])
+  }
+
   async function handleContinue() {
+    const playstyles = styles.map(s => s.toLowerCase())
+    const goalsLc = goals.map(g => g.toLowerCase())
     if (typeof window !== 'undefined') {
       localStorage.setItem('onb_main_role', mainRole)
       localStorage.setItem('onb_secondary_role', secondary ?? '')
+      localStorage.setItem('onb_styles', JSON.stringify({ playstyles, goals: goalsLc }))
     }
     fetch('/api/onboarding', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ step: 4, data: { main_role: mainRole, secondary_role: secondary ?? null } }),
+      body: JSON.stringify({ step: 4, data: { main_role: mainRole, secondary_role: secondary ?? null, playstyles, goals: goalsLc } }),
     }).catch(() => {})
     if (onDone) onDone(); else router.push(`/onboarding/${step + 1}`)
   }
@@ -74,7 +99,7 @@ export default function OnbStep3Role({ locale, step, steps, onDone }: Props) {
   const ALL = Object.keys(ROLES) as Array<keyof typeof ROLES>
 
   return (
-    <OnbShell step={step} steps={steps} title="TON RÔLE PRINCIPAL" sub="Le rôle que tu joues le plus en ranked. Ajoute un rôle secondaire si tu peux flex — ça élargit ton matching." onContinue={handleContinue} locale={locale}>
+    <OnbShell step={step} steps={steps} title="TON RÔLE & TON STYLE" sub="Le rôle que tu joues le plus, et ce qui définit ta façon de jouer — pour matcher des profils compatibles." onContinue={handleContinue} locale={locale}>
       {hasPrefill && <OnbPrefill>Ton compte Riot est lié — corrige ton rôle principal si besoin.</OnbPrefill>}
 
       <label style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--text-dim)', letterSpacing: '0.18em' }}>RÔLE PRINCIPAL</label>
@@ -132,6 +157,54 @@ export default function OnbStep3Role({ locale, step, steps, onDone }: Props) {
           {!secondary && <div style={{ marginTop: 10, fontFamily: 'var(--font-body)', fontSize: 12, color: 'var(--text-mute)' }}>Choisis le rôle que tu peux dépanner (un seul).</div>}
         </div>
       )}
+
+      {/* ── STYLE DE JEU (fusionné depuis l'ex-étape « Style de jeu ») ── */}
+      <label style={{ display: 'block', fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--text-dim)', letterSpacing: '0.18em', marginTop: 24 }}>STYLE DE JEU</label>
+      <div style={{ display: 'flex', gap: 9, flexWrap: 'wrap', marginTop: 13 }}>
+        {STYLES.map(({ label, color }) => {
+          const on = styles.includes(label)
+          return (
+            <span
+              key={label}
+              onClick={() => toggleStyle(label)}
+              style={{
+                padding: '10px 16px', borderRadius: 999, cursor: 'pointer',
+                fontFamily: 'var(--font-mono)', fontSize: 12, fontWeight: 600, letterSpacing: '0.04em',
+                background: on ? `color-mix(in srgb, ${color} 12%, transparent)` : 'rgba(255,255,255,0.04)',
+                border: `1px solid ${on ? color + '66' : 'var(--line)'}`,
+                color: on ? color : 'var(--text-dim)',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              {label}
+            </span>
+          )
+        })}
+      </div>
+
+      {/* ── OBJECTIF ── */}
+      <label style={{ display: 'block', fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--text-dim)', letterSpacing: '0.18em', marginTop: 24 }}>OBJECTIF</label>
+      <div style={{ display: 'flex', gap: 9, flexWrap: 'wrap', marginTop: 13 }}>
+        {GOALS.map(label => {
+          const on = goals.includes(label)
+          return (
+            <span
+              key={label}
+              onClick={() => toggleGoal(label)}
+              style={{
+                padding: '10px 16px', borderRadius: 999, cursor: 'pointer',
+                fontFamily: 'var(--font-mono)', fontSize: 12, fontWeight: 600, letterSpacing: '0.04em',
+                background: on ? 'rgba(255,209,102,0.11)' : 'rgba(255,255,255,0.04)',
+                border: `1px solid ${on ? 'rgba(255,209,102,0.33)' : 'var(--line)'}`,
+                color: on ? 'var(--gold)' : 'var(--text-dim)',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              {label}
+            </span>
+          )
+        })}
+      </div>
     </OnbShell>
   )
 }
