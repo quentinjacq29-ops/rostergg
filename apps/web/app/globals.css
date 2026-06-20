@@ -179,8 +179,8 @@
   .landing-footer-disc { margin-left: 0 !important; text-align: left !important; }
 }
 @media (max-width: 680px) {
-  /* Nav : masquer liens, lang, explorer; réduire padding */
-  .landing-nav-links, .landing-nav-guest, .landing-nav-lang { display: none !important; }
+  /* Nav : masquer liens, lang, explorer, connexion; réduire padding */
+  .landing-nav-links, .landing-nav-guest, .landing-nav-lang, .landing-nav-login { display: none !important; }
   .landing-nav { padding: 14px 20px !important; gap: 12px !important; }
   /* Connexion Riot : icône seule, masquer le texte */
   .riot-label { display: none !important; }

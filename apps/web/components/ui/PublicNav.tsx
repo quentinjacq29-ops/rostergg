@@ -51,12 +51,17 @@ export default function PublicNav() {
             Explorer sans compte
           </Link>
 
-          {/* Connexion Riot — icône seule ≤680px (.riot-label masqué) */}
+          {/* Connexion — lien texte → /login, masqué ≤680px (passe dans le menu mobile) */}
+          <Link href="/login" className="landing-nav-login" style={{ fontFamily: 'var(--font-body)', fontSize: 14, color: 'var(--text)', textDecoration: 'none', fontWeight: 600, whiteSpace: 'nowrap' }}>
+            Connexion
+          </Link>
+
+          {/* S'inscrire → onboarding direct (depuis la HP on saute la page /signup SEO) — icône seule ≤680px */}
           <Link href="/onboarding/1" className="landing-btn-riot" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '11px 22px', borderRadius: 11, background: 'linear-gradient(135deg, var(--cyan), var(--violet))', color: '#001018', fontFamily: 'var(--font-display)', fontSize: 13, letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 700, boxShadow: '0 10px 26px -10px var(--cyan)', textDecoration: 'none', whiteSpace: 'nowrap' }}>
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#001018" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
               <path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6z" />
             </svg>
-            <span className="riot-label">Connexion Riot</span>
+            <span className="riot-label">S&apos;inscrire</span>
           </Link>
 
           {/* Hamburger — visible ≤680px */}
@@ -81,6 +86,12 @@ export default function PublicNav() {
         ))}
         <Link href="/onboarding/1" onClick={() => setOpen(false)} style={{ padding: '13px 4px', fontSize: 16, color: 'var(--text-dim)', borderBottom: '1px solid var(--line)', display: 'block', textDecoration: 'none' }}>
           Explorer sans compte
+        </Link>
+        <Link href="/login" onClick={() => setOpen(false)} style={{ padding: '13px 4px', fontSize: 16, color: 'var(--text)', fontWeight: 600, borderBottom: '1px solid var(--line)', display: 'block', textDecoration: 'none' }}>
+          Connexion
+        </Link>
+        <Link href="/onboarding/1" onClick={() => setOpen(false)} style={{ padding: '13px 4px', fontSize: 16, color: 'var(--cyan)', fontWeight: 600, display: 'block', textDecoration: 'none' }}>
+          S&apos;inscrire
         </Link>
       </div>
     </>
