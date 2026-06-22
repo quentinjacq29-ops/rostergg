@@ -2,6 +2,9 @@ import { NextResponse } from 'next/server'
 import { getDDragonVersion } from '@/lib/riot/client'
 import https from 'node:https'
 
+// Servie à la demande (jamais prérendue au build) — dépend d'un fetch DDragon externe
+export const dynamic = 'force-dynamic'
+
 type DDragonChamp = {
   id: string
   key: string
