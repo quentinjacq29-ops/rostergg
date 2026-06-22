@@ -249,9 +249,15 @@
 .rgg-feed-col    { width: 408px; }
 .rgg-detail-pane { flex: 1; min-width: 0; height: 100%; }
 
+/* Duo : desktop 3-panneaux ≥860px ⇆ hub mobile ≤859px */
+.rgg-duo-desktop { display: flex; }
+.rgg-duo-mobile  { display: none; }
+
 @media (max-width: 859px) {
   .rgg-feed-col    { width: 100% !important; border-right: none !important; }
   .rgg-detail-pane { display: none !important; }
+  .rgg-duo-desktop { display: none !important; }
+  .rgg-duo-mobile  { display: block !important; }
 }
 
 /* Cursor blink */

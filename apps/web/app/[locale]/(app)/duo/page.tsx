@@ -1,5 +1,11 @@
+import type { Metadata } from 'next'
 import { createClient } from '@/lib/supabase/server'
 import DuoFeed from '@/components/duo/DuoFeed'
+
+// Écran connecté → jamais indexé (cf. handoff /duo §5)
+export const metadata: Metadata = {
+  robots: { index: false, follow: false },
+}
 
 export default async function DuoPage() {
   const supabase = await createClient()
