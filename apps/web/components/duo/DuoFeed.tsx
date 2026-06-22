@@ -897,12 +897,14 @@ function DuoFeedMobile(props: MobileProps) {
             {(chips.length > 0 || langs.length > 0 || queueOnly) && (
               <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap', width: '100%' }}>
                 {chips.map(chip => {
-                  const color = chip.role ? (ROLE_META[chip.role]?.c ?? T.cyan) : T.textDim
+                  const isRole = !!chip.role
+                  const color = isRole ? (ROLE_META[chip.role!]?.c ?? T.cyan) : T.textDim
                   return (
-                    <span key={chip.id} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 7px 6px 11px', borderRadius: 999, background: `${color}1f`, border: `1px solid ${color}66`, color, fontFamily: T.mono, fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-                      {chip.role && <RoleIcon role={chip.role} size={12} active />}{chip.label}
-                      <button onClick={() => removeChip(chip.id)} style={{ width: 16, height: 16, borderRadius: '50%', border: 'none', padding: 0, cursor: 'pointer', background: `${color}26`, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="3.2" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12" /></svg>
+                    <span key={chip.id} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 7px 6px 11px', borderRadius: 999, fontFamily: T.mono, fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', background: isRole ? `${color}1f` : 'rgba(255,255,255,0.05)', border: `1px solid ${isRole ? color + '66' : T.lineStrong}`, color }}>
+                      {isRole && <span style={{ padding: '1px 5px', borderRadius: 6, border: `1px solid ${color}`, color, fontSize: 10, fontWeight: 700 }}>{String(chip.role).toUpperCase()}</span>}
+                      {isRole ? 'RÔLE' : chip.label}
+                      <button onClick={() => removeChip(chip.id)} style={{ width: 16, height: 16, borderRadius: '50%', border: 'none', padding: 0, cursor: 'pointer', background: isRole ? `${color}26` : 'rgba(255,255,255,0.09)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke={isRole ? color : T.textDim} strokeWidth="3.2" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12" /></svg>
                       </button>
                     </span>
                   )
@@ -1018,7 +1020,7 @@ function DuoFeedMobile(props: MobileProps) {
 
         <div style={{ display: 'flex', gap: 10, marginTop: 22 }}>
           <button onClick={resetSheet} style={{ flexShrink: 0, padding: '0 18px', height: 50, borderRadius: 13, background: 'rgba(255,255,255,0.04)', border: `1px solid ${T.lineStrong}`, color: T.text, fontFamily: T.display, fontSize: 12, letterSpacing: '0.06em', textTransform: 'uppercase', cursor: 'pointer' }}>Réinit.</button>
-          <button onClick={applySheet} style={{ flex: 1, height: 50, borderRadius: 13, border: 'none', cursor: 'pointer', background: `linear-gradient(135deg, ${T.cyan}, ${T.violet})`, color: '#001018', fontFamily: T.display, fontSize: 13, letterSpacing: '0.06em', textTransform: 'uppercase', fontWeight: 700, boxShadow: `0 12px 30px -14px ${T.cyan}` }}>Voir les résultats</button>
+          <button onClick={applySheet} style={{ flex: 1, height: 50, borderRadius: 13, border: 'none', cursor: 'pointer', background: `linear-gradient(135deg, ${T.cyan}, ${T.violet})`, color: '#001018', fontFamily: T.display, fontSize: 13, letterSpacing: '0.06em', textTransform: 'uppercase', fontWeight: 700, boxShadow: `0 12px 30px -14px ${T.cyan}` }}>Voir {fit.length} résultat{fit.length > 1 ? 's' : ''}</button>
         </div>
       </aside>
 
