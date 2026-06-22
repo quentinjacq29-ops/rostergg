@@ -86,7 +86,7 @@ async function fetchMatchCount(): Promise<number | null> {
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return null
-    const { data, error } = await supabase.rpc('duo_feed', { p_user_id: user.id, p_limit: 40, p_offset: 0 })
+    const { data, error } = await supabase.rpc('duo_feed', { p_user_id: user.id, p_role_filters: null, p_limit: 40, p_offset: 0 })
     if (error || !data) return null
     return (data as unknown[]).length
   } catch {

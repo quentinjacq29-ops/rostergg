@@ -316,26 +316,31 @@ export default function AppShell({
       </main>
 
       {/* ── Bottom nav (mobile <860px) */}
-      <nav className="rgg-bottom-nav" style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 50, display: 'none' }}>
-        <div style={{
-          display: 'flex', background: T.surface,
-          borderTop: '1px solid rgba(255,255,255,0.08)',
-          paddingBottom: 'env(safe-area-inset-bottom)',
-        }}>
+      <nav className="rgg-bottom-nav" style={{
+        position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 50, display: 'none',
+        background: 'rgba(8,10,16,0.94)', backdropFilter: 'blur(16px)',
+        borderTop: `1px solid ${T.lineStrong}`,
+      }}>
+        {/* width:100% — sinon le <nav> en display:flex (CSS responsive) écrase la largeur de cette rangée */}
+        <div style={{ display: 'flex', width: '100%', paddingBottom: 'env(safe-area-inset-bottom)' }}>
           {NAV.map(item => {
             const on = activeId === item.id
+            const a = item.accent
+            const showBadge = item.id === 'inbox' && badge > 0
             return (
               <Link key={item.id} href={item.href} style={{
-                flex: 1, display: 'flex', flexDirection: 'column',
-                alignItems: 'center', gap: 3, padding: '8px 0 6px',
-                textDecoration: 'none',
+                flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column',
+                alignItems: 'center', gap: 4, padding: '9px 0 7px', textDecoration: 'none',
               }}>
-                <span style={{
-                  display: 'block', width: 18, height: 3, borderRadius: 2, marginBottom: 2,
-                  background: on ? item.accent : 'transparent',
-                  transition: 'background .14s',
-                }}/>
-                <span style={{ fontFamily: T.display, fontSize: 10, color: on ? item.accent : T.textMute, letterSpacing: '0.08em' }}>
+                <span style={{ position: 'relative', display: 'inline-flex' }}>
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={on ? a : T.textMute} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={on ? { filter: `drop-shadow(0 0 5px ${a}80)` } : {}}>
+                    {item.icon}
+                  </svg>
+                  {showBadge && (
+                    <span style={{ position: 'absolute', top: -5, right: -8, minWidth: 16, height: 16, padding: '0 4px', borderRadius: 8, background: T.danger, color: '#fff', fontFamily: T.mono, fontSize: 9, fontWeight: 800, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>{badge}</span>
+                  )}
+                </span>
+                <span style={{ fontFamily: T.mono, fontSize: 9, letterSpacing: '0.06em', color: on ? a : T.textMute }}>
                   {item.label.toUpperCase()}
                 </span>
               </Link>

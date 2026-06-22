@@ -1092,9 +1092,11 @@ export default function DuoFeed({
     setSelectedId(null)
     setDetailRequest(null)
 
+    // p_role_filters TOUJOURS présent (null si vide) : lève l'ambiguïté PostgREST
+    // entre l'ancienne fonction duo_feed(p_role_filter text) et la nouvelle (p_role_filters text[])
     const { data: feed, error: rpcError } = await supabase.rpc('duo_feed', {
       p_user_id:      userId,
-      p_role_filters: filters.role       ?? undefined,
+      p_role_filters: filters.role       ?? null,
       p_rank_floor:   filters.rankFloor ?? undefined,
       p_rank_ceiling: filters.rankCeiling ?? undefined,
       p_voice:        filters.voice     ?? undefined,
