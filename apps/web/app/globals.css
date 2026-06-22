@@ -275,6 +275,16 @@
   .rgg-bottom-nav-inner { max-width: 430px !important; margin: 0 auto !important; }
 }
 
+/* Demande de duo : modal centré ≥860px ⇆ bottom-sheet ≤859px */
+.rgg-dr-grab { display: none; }
+@media (max-width: 859px) {
+  .rgg-dr-backdrop { align-items: flex-end !important; padding: 0 !important; }
+  .rgg-dr-panel    { width: 100% !important; max-width: 430px !important; max-height: 94% !important; border-radius: 22px 22px 0 0 !important; animation: rgg-sheet-up .3s cubic-bezier(.2,.9,.3,1) both; }
+  .rgg-dr-grab     { display: block; }
+}
+@keyframes rgg-sheet-up { from { transform: translateY(100%); } to { transform: translateY(0); } }
+@media (prefers-reduced-motion: reduce) { .rgg-dr-panel { animation: none !important; } }
+
 /* Cursor blink */
 @keyframes rgg-blink {
   0%, 100% { opacity: 1; }
