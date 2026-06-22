@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { championIconUrl } from '@/lib/riot/assets'
@@ -581,10 +581,16 @@ const MODES = [
   { key: '1v1' as const, label: '1v1', icon: <path d="M14.5 17.5L3 6V3h3l11.5 11.5M13 19l6-6 2 2-6 6zM16 16l4 4M19 9l2-2-3-3-2 2" /> },
 ]
 const ELO_OPTS: { label: string; tier: string }[] = [
+  { label: 'FER+', tier: 'IRON' },
+  { label: 'BRONZE+', tier: 'BRONZE' },
+  { label: 'ARGENT+', tier: 'SILVER' },
+  { label: 'OR+', tier: 'GOLD' },
   { label: 'PLAT+', tier: 'PLATINUM' },
-  { label: 'EME+', tier: 'EMERALD' },
+  { label: 'ÉME+', tier: 'EMERALD' },
   { label: 'DIA+', tier: 'DIAMOND' },
   { label: 'MASTER+', tier: 'MASTER' },
+  { label: 'GM+', tier: 'GRANDMASTER' },
+  { label: 'CHALL+', tier: 'CHALLENGER' },
 ]
 const REGION_OPTS = ['EUW', 'EUNE', 'NA', 'KR']
 const LANG_OPTS = ['fr', 'en', 'es', 'de', 'it']
@@ -1145,6 +1151,30 @@ export default function DuoFeed({
   }, [userId, filters]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => { loadFeed() }, [loadFeed])
+
+  // ── Persistance des filtres dans matching_prefs (modèle bidirectionnel §4.8) :
+  // filtrer dans /duo met à jour mes préférences de recherche → affecte mon feed
+  // ET ma visibilité dans le feed des autres. Debounce 600ms, on saute le 1er rendu
+  // (les filtres sont initialisés DEPUIS les prefs, inutile de les ré-écrire).
+  const firstFilterSync = useRef(true)
+  useEffect(() => {
+    if (!userId) return
+    if (firstFilterSync.current) { firstFilterSync.current = false; return }
+    const t = setTimeout(() => {
+      fetch('/api/me/prefs', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          looking_for_roles: filters.role ?? [],
+          rank_floor:        filters.rankFloor,
+          rank_ceiling:      filters.rankCeiling,
+          regions:           filters.region ? [filters.region] : [],
+          voice_required:    filters.voice,
+        }),
+      }).catch(() => {})
+    }, 600)
+    return () => clearTimeout(t)
+  }, [filters, userId])
 
   // ── Fetch profil courant (pour DuoRequestModal "Ce que X verra")
   useEffect(() => {

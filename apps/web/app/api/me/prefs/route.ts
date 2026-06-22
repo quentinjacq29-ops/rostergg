@@ -14,6 +14,9 @@ export async function PATCH(req: Request) {
     playstyles,
     languages,
     voice_required,
+    rank_floor,
+    rank_ceiling,
+    regions,
     availability,
   } = body
 
@@ -29,6 +32,9 @@ export async function PATCH(req: Request) {
   if (playstyles        !== undefined) prefsUpdate.playstyles          = playstyles
   if (languages         !== undefined) prefsUpdate.languages           = languages
   if (voice_required    !== undefined) prefsUpdate.voice_required      = voice_required
+  if (rank_floor        !== undefined) prefsUpdate.rank_floor          = rank_floor
+  if (rank_ceiling      !== undefined) prefsUpdate.rank_ceiling        = rank_ceiling
+  if (regions           !== undefined) prefsUpdate.regions             = regions
 
   if (Object.keys(prefsUpdate).length > 1) {
     await supabase.from('matching_prefs').upsert(prefsUpdate, { onConflict: 'profile_id' })
