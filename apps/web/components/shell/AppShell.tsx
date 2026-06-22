@@ -335,7 +335,7 @@ export default function AppShell({
         borderTop: `1px solid ${T.lineStrong}`,
       }}>
         {/* width:100% — sinon le <nav> en display:flex (CSS responsive) écrase la largeur de cette rangée */}
-        <div style={{ display: 'flex', width: '100%', paddingBottom: 'env(safe-area-inset-bottom)' }}>
+        <div className="rgg-bottom-nav-inner" style={{ display: 'flex', width: '100%', paddingBottom: 'env(safe-area-inset-bottom)' }}>
           {MOBILE_TABS.map(tab => {
             const on = mobileTab === tab.id
             const showBadge = tab.id === 'messages' && badge > 0

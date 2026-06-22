@@ -855,7 +855,7 @@ function DuoFeedMobile(props: MobileProps) {
   }
 
   return (
-    <div className={props.className} style={{ padding: '4px 2px 88px' }}>
+    <div className={props.className} style={{ maxWidth: 430, margin: '0 auto', padding: '20px 18px 96px', boxSizing: 'border-box' }}>
       {/* mode switcher */}
       <div style={{ display: 'flex', gap: 5, padding: 4, borderRadius: 14, background: 'rgba(255,255,255,0.04)', border: `1px solid ${T.line}`, marginBottom: 16 }}>
         {MODES.map(m => {

@@ -111,6 +111,7 @@ export default function DTopBar({
         borderBottom: `1px solid ${T.line}`,
         background: 'rgba(10,12,20,0.6)', backdropFilter: 'blur(12px)',
       }}>
+       <div className="rgg-topbar-inner" style={{ display: 'flex', alignItems: 'center', gap: 24, width: '100%' }}>
         {/* Logo compact — mobile uniquement (≤859px) */}
         <span className="rgg-topbar-logo" style={{ alignItems: 'center', gap: 9 }}>
           <span style={{ width: 30, height: 30, borderRadius: 9, background: 'linear-gradient(150deg, #0f121c, #06070b)', boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.1), 0 0 14px rgba(0,224,255,0.25)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
@@ -195,6 +196,7 @@ export default function DTopBar({
             </svg>
           </button>
         </div>
+       </div>
       </div>
 
       {/* ── Overlays ── */}
