@@ -695,9 +695,9 @@ function MCard({ item, online, expanded, pool, request, onToggle, onOpenRequest,
           <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap', lineHeight: 1 }}>
             <span style={{ fontFamily: T.display, fontSize: 18, color: T.text, letterSpacing: '0.03em' }}>{name}</span>
             {tag && <span style={{ fontFamily: T.mono, fontSize: 10.5, color: T.textDim }}>{tag}</span>}
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, padding: '2px 6px', borderRadius: 6, background: `${roleMeta.c}1a`, border: `1px solid ${roleMeta.c}40` }}><RoleIcon role={role} size={11} active /></span>
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke={T.textMute} strokeWidth="2.6" strokeLinecap="round"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, padding: '2px 6px', borderRadius: 6, background: `${lookingMeta.c}14`, border: `1px solid ${lookingMeta.c}33` }}><RoleIcon role={looking} size={11} active /></span>
+            <span style={{ fontFamily: T.mono, fontSize: 10, fontWeight: 700, letterSpacing: '0.04em', padding: '2px 7px', borderRadius: 6, border: `1px solid ${roleMeta.c}`, color: roleMeta.c }}>{String(role).toUpperCase()}</span>
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke={T.textMute} strokeWidth="2.6" strokeLinecap="round" style={{ flexShrink: 0 }}><path d="M5 12h14M13 6l6 6-6 6" /></svg>
+            <span style={{ fontFamily: T.mono, fontSize: 10, fontWeight: 700, letterSpacing: '0.04em', padding: '2px 7px', borderRadius: 6, border: `1px solid ${lookingMeta.c}`, color: lookingMeta.c }}>{String(looking).toUpperCase()}</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginTop: 8, flexWrap: 'wrap' }}>
             <Pill mono size="sm" accent={rankColor}>{rankLabel}</Pill>
@@ -1058,6 +1058,9 @@ export default function DuoFeed({
   const [loading,      setLoading]      = useState(true)
   const [error,        setError]        = useState(false)
   const [selectedId,   setSelectedId]   = useState<string | null>(null)
+  // Mobile : carte dépliée (accordéon). Indépendant de selectedId pour garder
+  // le desktop (auto-sélection 1ère carte) intact ET la liste mobile repliée par défaut.
+  const [expandedId,   setExpandedId]   = useState<string | null>(null)
   const [detailAvail,  setDetailAvail]  = useState<{ weekday: number; slot: number; intensity: number }[]>([])
   const [detailPool,    setDetailPool]    = useState<Record<string, string[]>>({})
   // mastery par champion : { Ahri: { level: 7, points: 112000 } }
@@ -1090,6 +1093,7 @@ export default function DuoFeed({
     setLoading(true)
     setError(false)
     setSelectedId(null)
+    setExpandedId(null)
     setDetailRequest(null)
 
     // p_role_filters TOUJOURS présent (null si vide) : lève l'ambiguïté PostgREST
@@ -1422,8 +1426,8 @@ export default function DuoFeed({
         removeChip={removeChip}
         onApplyFilters={setFilters}
         onRetry={loadFeed}
-        selectedId={selectedId}
-        onToggleCard={id => setSelectedId(prev => (prev === id ? null : id))}
+        selectedId={expandedId}
+        onToggleCard={id => { setExpandedId(prev => (prev === id ? null : id)); setSelectedId(id) }}
         detailPool={detailPool}
         detailRequest={detailRequest}
         onOpenRequest={() => setShowModal(true)}
