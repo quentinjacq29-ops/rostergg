@@ -253,14 +253,22 @@
 .rgg-duo-desktop { display: flex; }
 .rgg-duo-mobile  { display: none; }
 
+/* Topbar : éléments mobile-only masqués par défaut (desktop) */
+.rgg-topbar-logo   { display: none; }
+.rgg-topbar-filter { display: none; }
+
 @media (max-width: 859px) {
   .rgg-feed-col    { width: 100% !important; border-right: none !important; }
   .rgg-detail-pane { display: none !important; }
   .rgg-duo-desktop { display: none !important; }
   .rgg-duo-mobile  { display: block !important; flex: 1 !important; min-height: 0 !important; overflow-y: auto !important; -webkit-overflow-scrolling: touch; }
-  /* Topbar de l'app : compacte en mobile (recherche ⌘K masquée → plus de chevauchement) */
-  .rgg-topbar        { height: 58px !important; padding: 0 16px !important; gap: 12px !important; }
-  .rgg-topbar-search { display: none !important; }
+  /* Topbar de l'app : compacte en mobile = logo + filtre + cloche (maquette) */
+  .rgg-topbar          { height: 58px !important; padding: 0 16px !important; gap: 12px !important; }
+  .rgg-topbar-search   { display: none !important; }
+  .rgg-topbar-title    { display: none !important; }
+  .rgg-topbar-settings { display: none !important; }
+  .rgg-topbar-logo     { display: flex !important; }
+  .rgg-topbar-filter   { display: inline-flex !important; }
 }
 
 /* Cursor blink */

@@ -828,6 +828,14 @@ function DuoFeedMobile(props: MobileProps) {
   function resetSheet() { setDRole([]); setDFloor(null); setDRegion(null); setDVoice(false); setDLangs([]); setDQueue(false) }
   function toggleArr(arr: string[], v: string) { return arr.includes(v) ? arr.filter(x => x !== v) : [...arr, v] }
 
+  // L'icône filtre de la topbar mobile (DTopBar) ouvre ce même bottom-sheet
+  useEffect(() => {
+    const h = () => openSheet()
+    window.addEventListener('rgg:open-duo-filters', h)
+    return () => window.removeEventListener('rgg:open-duo-filters', h)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filters, langs, queueOnly])
+
   // post-filtres locaux (langues + en file) — RPC ne les gère pas
   const shown = items.filter(it => {
     if (queueOnly && !onlineIds.has(it.candidate_id)) return false

@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useRef, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import NotificationsPanel from '@/components/overlays/NotificationsPanel'
 import SearchPalette      from '@/components/overlays/SearchPalette'
@@ -34,6 +34,8 @@ export default function DTopBar({
   locale   = 'fr',
 }: Props) {
   const router = useRouter()
+  const pathname = usePathname()
+  const onDuo = pathname.includes('/duo')
   const [open,         setOpen]         = useState<Panel>(null)
   const [unreadCount,  setUnreadCount]  = useState(initialUnreadCount)
   const [isBookmarked, setIsBookmarked] = useState(target?.isBookmarked ?? false)
@@ -109,8 +111,16 @@ export default function DTopBar({
         borderBottom: `1px solid ${T.line}`,
         background: 'rgba(10,12,20,0.6)', backdropFilter: 'blur(12px)',
       }}>
-        {/* Eyebrow + Title */}
-        <div style={{ minWidth: 0 }}>
+        {/* Logo compact — mobile uniquement (≤859px) */}
+        <span className="rgg-topbar-logo" style={{ alignItems: 'center', gap: 9 }}>
+          <span style={{ width: 30, height: 30, borderRadius: 9, background: 'linear-gradient(150deg, #0f121c, #06070b)', boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.1), 0 0 14px rgba(0,224,255,0.25)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <svg width="18" height="18" viewBox="0 0 48 48" fill="none"><path d="M9 9 L20 24 L9 39" stroke="#00e0ff" strokeWidth="5.2" strokeLinecap="round" strokeLinejoin="round" /><path d="M39 9 L28 24 L39 39" stroke="#8b5cf6" strokeWidth="5.2" strokeLinecap="round" strokeLinejoin="round" /><circle cx="24" cy="24" r="4.6" fill="#00e0ff" /></svg>
+          </span>
+          <span style={{ fontFamily: T.display, fontSize: 17, letterSpacing: '0.04em', color: T.text }}>ROSTER<span style={{ color: T.cyan }}>GG</span></span>
+        </span>
+
+        {/* Eyebrow + Title — desktop (masqué ≤859px) */}
+        <div className="rgg-topbar-title" style={{ minWidth: 0 }}>
           <div style={{ fontFamily: T.mono, fontSize: 9.5, color: accent, letterSpacing: '0.24em', marginBottom: 3 }}>
             ◢ {eyebrow}
           </div>
@@ -148,6 +158,18 @@ export default function DTopBar({
             </button>
           )}
 
+          {/* Filtres — mobile uniquement, sur /duo (ouvre le bottom-sheet du feed) */}
+          {onDuo && (
+            <button
+              className="rgg-topbar-filter"
+              onClick={() => window.dispatchEvent(new CustomEvent('rgg:open-duo-filters'))}
+              aria-label="Filtres"
+              style={{ width: 42, height: 42, borderRadius: 11, cursor: 'pointer', background: 'rgba(255,255,255,0.04)', border: `1px solid ${T.line}`, alignItems: 'center', justifyContent: 'center' }}
+            >
+              <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke={T.text} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M4 6h16M7 12h10M10 18h4" /></svg>
+            </button>
+          )}
+
           {/* Bell */}
           <button
             onClick={() => toggle('notifs')}
@@ -161,8 +183,9 @@ export default function DTopBar({
             )}
           </button>
 
-          {/* Settings */}
+          {/* Settings — masqué en mobile (présent dans la tabbar « Réglages ») */}
           <button
+            className="rgg-topbar-settings"
             onClick={() => router.push(`/${locale}/settings`)}
             style={{ width: 42, height: 42, borderRadius: 11, cursor: 'pointer', background: 'rgba(255,255,255,0.04)', border: `1px solid ${T.line}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
           >
