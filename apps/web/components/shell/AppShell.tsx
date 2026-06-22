@@ -43,6 +43,15 @@ const NAV = [
   },
 ]
 
+// Tabbar mobile (bottom-nav) — fidèle aux maquettes : Rechercher · Messages · Profil · Réglages.
+// « Rechercher » = le hub /duo (Teams/1v1 vivent dans le switcher du hub, pas dans la tabbar).
+const MOBILE_TABS = [
+  { id: 'search',   label: 'Rechercher', href: '/duo',      icon: <><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></> },
+  { id: 'messages', label: 'Messages',   href: '/inbox',    icon: <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>, badge: true },
+  { id: 'profile',  label: 'Profil',     href: '/me',       icon: <><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></> },
+  { id: 'settings', label: 'Réglages',   href: '/settings', icon: <><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></> },
+]
+
 type ShellUser = {
   id?: string
   displayName: string | null
@@ -83,6 +92,10 @@ export default function AppShell({
 }) {
   const pathname = usePathname()
   const activeId = pathname.includes('/me') ? 'me' : (NAV.find(n => pathname.includes(n.href))?.id ?? 'duo')
+  const mobileTab = pathname.includes('/inbox') ? 'messages'
+    : pathname.includes('/me') ? 'profile'
+    : pathname.includes('/settings') ? 'settings'
+    : 'search'
   const tbConfig = topbarConfig(pathname)
 
   const userName  = user?.gameName ?? user?.displayName ?? 'Joueur'
@@ -323,25 +336,24 @@ export default function AppShell({
       }}>
         {/* width:100% — sinon le <nav> en display:flex (CSS responsive) écrase la largeur de cette rangée */}
         <div style={{ display: 'flex', width: '100%', paddingBottom: 'env(safe-area-inset-bottom)' }}>
-          {NAV.map(item => {
-            const on = activeId === item.id
-            const a = item.accent
-            const showBadge = item.id === 'inbox' && badge > 0
+          {MOBILE_TABS.map(tab => {
+            const on = mobileTab === tab.id
+            const showBadge = tab.id === 'messages' && badge > 0
             return (
-              <Link key={item.id} href={item.href} style={{
+              <Link key={tab.id} href={tab.href} style={{
                 flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column',
                 alignItems: 'center', gap: 4, padding: '9px 0 7px', textDecoration: 'none',
               }}>
                 <span style={{ position: 'relative', display: 'inline-flex' }}>
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={on ? a : T.textMute} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={on ? { filter: `drop-shadow(0 0 5px ${a}80)` } : {}}>
-                    {item.icon}
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={on ? T.cyan : T.textMute} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={on ? { filter: `drop-shadow(0 0 5px ${T.cyan}80)` } : {}}>
+                    {tab.icon}
                   </svg>
                   {showBadge && (
                     <span style={{ position: 'absolute', top: -5, right: -8, minWidth: 16, height: 16, padding: '0 4px', borderRadius: 8, background: T.danger, color: '#fff', fontFamily: T.mono, fontSize: 9, fontWeight: 800, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>{badge}</span>
                   )}
                 </span>
-                <span style={{ fontFamily: T.mono, fontSize: 9, letterSpacing: '0.06em', color: on ? a : T.textMute }}>
-                  {item.label.toUpperCase()}
+                <span style={{ fontFamily: T.mono, fontSize: 9, letterSpacing: '0.06em', color: on ? T.cyan : T.textMute }}>
+                  {tab.label.toUpperCase()}
                 </span>
               </Link>
             )

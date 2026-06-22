@@ -576,9 +576,9 @@ type MobileProps = {
 }
 
 const MODES = [
-  { key: 'duo' as const, label: 'Duo' },
-  { key: 'teams' as const, label: 'Teams' },
-  { key: '1v1' as const, label: '1v1' },
+  { key: 'duo' as const, label: 'Duo', icon: <><circle cx="9" cy="7" r="3" /><circle cx="16" cy="9" r="2.4" /><path d="M3 20v-1a5 5 0 015-5h2a5 5 0 015 5v1M15 16h2a4 4 0 014 4v0" /></> },
+  { key: 'teams' as const, label: 'Teams', icon: <><circle cx="12" cy="7" r="3" /><circle cx="5" cy="10" r="2.2" /><circle cx="19" cy="10" r="2.2" /><path d="M2 19v-1a4 4 0 014-4M22 19v-1a4 4 0 00-4-4M7 20v-1a5 5 0 0110 0v1" /></> },
+  { key: '1v1' as const, label: '1v1', icon: <path d="M14.5 17.5L3 6V3h3l11.5 11.5M13 19l6-6 2 2-6 6zM16 16l4 4M19 9l2-2-3-3-2 2" /> },
 ]
 const ELO_OPTS: { label: string; tier: string }[] = [
   { label: 'PLAT+', tier: 'PLATINUM' },
@@ -853,7 +853,8 @@ function DuoFeedMobile(props: MobileProps) {
         {MODES.map(m => {
           const on = mode === m.key
           return (
-            <button key={m.key} onClick={() => setMode(m.key)} style={{ flex: 1, height: 44, borderRadius: 11, border: 'none', cursor: 'pointer', background: on ? `linear-gradient(135deg, ${T.cyan}, ${T.violet})` : 'transparent', color: on ? '#001018' : T.textDim, fontFamily: T.display, fontSize: 13, letterSpacing: '0.05em', textTransform: 'uppercase', boxShadow: on ? `0 8px 20px -10px ${T.cyan}` : 'none' }}>
+            <button key={m.key} onClick={() => setMode(m.key)} style={{ flex: 1, height: 44, borderRadius: 11, border: 'none', cursor: 'pointer', background: on ? `linear-gradient(135deg, ${T.cyan}, ${T.violet})` : 'transparent', color: on ? '#001018' : T.textDim, fontFamily: T.display, fontSize: 13, letterSpacing: '0.05em', textTransform: 'uppercase', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 7, boxShadow: on ? `0 8px 20px -10px ${T.cyan}` : 'none' }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>{m.icon}</svg>
               {m.label}
             </button>
           )
