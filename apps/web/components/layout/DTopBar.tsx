@@ -103,7 +103,7 @@ export default function DTopBar({
   return (
     <>
       {/* ── DTopBar ── */}
-      <div style={{
+      <div className="rgg-topbar" style={{
         flexShrink: 0, height: 76, boxSizing: 'border-box',
         display: 'flex', alignItems: 'center', gap: 24, padding: '0 28px',
         borderBottom: `1px solid ${T.line}`,
@@ -121,6 +121,7 @@ export default function DTopBar({
 
         {/* Search bar */}
         <div
+          className="rgg-topbar-search"
           style={{ flex: 1, maxWidth: 460, cursor: 'text' }}
           onClick={() => toggle('search')}
         >

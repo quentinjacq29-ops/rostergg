@@ -847,7 +847,7 @@ function DuoFeedMobile(props: MobileProps) {
   }
 
   return (
-    <div className={props.className} style={{ padding: '4px 2px 20px' }}>
+    <div className={props.className} style={{ padding: '4px 2px 88px' }}>
       {/* mode switcher */}
       <div style={{ display: 'flex', gap: 5, padding: 4, borderRadius: 14, background: 'rgba(255,255,255,0.04)', border: `1px solid ${T.line}`, marginBottom: 16 }}>
         {MODES.map(m => {
@@ -1102,7 +1102,7 @@ export default function DuoFeed({
       p_limit: 40, p_offset: 0,
     })
 
-    if (rpcError) { setError(true); setItems([]); setLoading(false); return }
+    if (rpcError) { console.error('[duo_feed] RPC error:', rpcError.message, rpcError); setError(true); setItems([]); setLoading(false); return }
     if (!feed?.length) { setItems([]); setLoading(false); return }
 
     const ids = (feed as FeedRow[]).map(f => f.candidate_id)
