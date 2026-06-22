@@ -926,28 +926,32 @@ function DuoFeedMobile(props: MobileProps) {
           {loading ? (
             <>{Array.from({ length: 4 }).map((_, i) => <MSkel key={i} />)}</>
           ) : error ? (
-            <div style={{ maxWidth: 440, margin: '6vh auto', textAlign: 'center', padding: '40px 28px', borderRadius: 20, background: `linear-gradient(180deg, ${T.surface}, ${T.bg})`, border: `1px solid ${T.line}` }}>
-              <span style={{ display: 'inline-flex', width: 72, height: 72, borderRadius: 20, alignItems: 'center', justifyContent: 'center', margin: '0 auto 22px', background: `${T.danger}1f`, border: `1px solid ${T.danger}66` }}>
-                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke={T.danger} strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M12 9v4M12 17h.01M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z" /></svg>
+            <div style={{ minHeight: 'calc(100dvh - 320px)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+             <div style={{ width: '100%', maxWidth: 440, textAlign: 'center', padding: '32px 26px', borderRadius: 20, background: `linear-gradient(180deg, ${T.surface}, ${T.bg})`, border: `1px solid ${T.line}` }}>
+              <span style={{ display: 'inline-flex', width: 60, height: 60, borderRadius: 18, alignItems: 'center', justifyContent: 'center', margin: '0 auto 18px', background: `${T.danger}1f`, border: `1px solid ${T.danger}66` }}>
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke={T.danger} strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M12 9v4M12 17h.01M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z" /></svg>
               </span>
               <h2 style={{ margin: 0, fontFamily: T.display, fontSize: 24, color: T.text, letterSpacing: '0.02em' }}>IMPOSSIBLE DE CHARGER</h2>
               <p style={{ margin: '12px auto 0', fontSize: 14, color: T.textDim, lineHeight: 1.6, maxWidth: 320 }}>On n&apos;a pas pu récupérer tes matchs. Vérifie ta connexion — le compatibility engine est peut-être momentanément indisponible.</p>
-              <button onClick={onRetry} style={{ marginTop: 24, padding: '13px 24px', borderRadius: 12, border: 'none', cursor: 'pointer', background: `linear-gradient(135deg, ${T.cyan}, ${T.violet})`, color: '#001018', fontFamily: T.display, fontSize: 13, letterSpacing: '0.06em', textTransform: 'uppercase', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 7 }}>
+              <button onClick={onRetry} style={{ marginTop: 22, padding: '13px 24px', borderRadius: 12, border: 'none', cursor: 'pointer', background: `linear-gradient(135deg, ${T.cyan}, ${T.violet})`, color: '#001018', fontFamily: T.display, fontSize: 13, letterSpacing: '0.06em', textTransform: 'uppercase', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 7 }}>
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#001018" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M23 4v6h-6M1 20v-6h6M3.5 9a9 9 0 0114.8-3.4L23 10M1 14l4.7 4.4A9 9 0 0020.5 15" /></svg>
                 Réessayer
               </button>
+             </div>
             </div>
           ) : shown.length === 0 ? (
-            <div style={{ maxWidth: 440, margin: '6vh auto', textAlign: 'center', padding: '40px 28px', borderRadius: 20, background: `linear-gradient(180deg, ${T.surface}, ${T.bg})`, border: `1px solid ${T.line}` }}>
-              <span style={{ display: 'inline-flex', width: 72, height: 72, borderRadius: 20, alignItems: 'center', justifyContent: 'center', margin: '0 auto 22px', background: 'rgba(255,255,255,0.04)', border: `1px solid ${T.lineStrong}` }}>
-                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke={T.textMute} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="7" /><path d="M21 21l-4-4" /></svg>
+            <div style={{ minHeight: 'calc(100dvh - 320px)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+             <div style={{ width: '100%', maxWidth: 440, textAlign: 'center', padding: '32px 26px', borderRadius: 20, background: `linear-gradient(180deg, ${T.surface}, ${T.bg})`, border: `1px solid ${T.line}` }}>
+              <span style={{ display: 'inline-flex', width: 60, height: 60, borderRadius: 18, alignItems: 'center', justifyContent: 'center', margin: '0 auto 18px', background: 'rgba(255,255,255,0.04)', border: `1px solid ${T.lineStrong}` }}>
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke={T.textMute} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="7" /><path d="M21 21l-4-4" /></svg>
               </span>
               <h2 style={{ margin: 0, fontFamily: T.display, fontSize: 24, color: T.text, letterSpacing: '0.02em' }}>AUCUN DUO POUR CES FILTRES</h2>
               <p style={{ margin: '12px auto 0', fontSize: 14, color: T.textDim, lineHeight: 1.6, maxWidth: 320 }}>Personne ne correspond à tous tes critères pour l&apos;instant. Élargis ta recherche ou réessaie plus tard — de nouveaux joueurs se connectent en continu.</p>
-              <div style={{ marginTop: 24, display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
+              <div style={{ marginTop: 22, display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
                 <button onClick={openSheet} style={{ padding: '13px 22px', borderRadius: 12, border: 'none', cursor: 'pointer', background: `linear-gradient(135deg, ${T.cyan}, ${T.violet})`, color: '#001018', fontFamily: T.display, fontSize: 13, letterSpacing: '0.06em', textTransform: 'uppercase', fontWeight: 700 }}>Élargir les filtres</button>
                 <button onClick={clearAll} style={{ padding: '13px 22px', borderRadius: 12, cursor: 'pointer', background: 'rgba(255,255,255,0.05)', border: `1px solid ${T.lineStrong}`, color: T.text, fontFamily: T.display, fontSize: 13, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Voir tous</button>
               </div>
+             </div>
             </div>
           ) : (
             <>
