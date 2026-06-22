@@ -807,14 +807,12 @@ function DuoFeedMobile(props: MobileProps) {
   const [mode, setMode] = useState<'duo' | 'teams' | '1v1'>('duo')
   const [sheetOpen, setSheetOpen] = useState(false)
   const [langs, setLangs] = useState<string[]>([])
-  const [queueOnly, setQueueOnly] = useState(false)
   // sheet draft
   const [dRole, setDRole] = useState<string[]>([])
   const [dFloor, setDFloor] = useState<string | null>(null)
   const [dRegion, setDRegion] = useState<string | null>(null)
   const [dVoice, setDVoice] = useState(false)
   const [dLangs, setDLangs] = useState<string[]>([])
-  const [dQueue, setDQueue] = useState(false)
 
   function openSheet() {
     setDRole(filters.role ?? [])
@@ -822,16 +820,14 @@ function DuoFeedMobile(props: MobileProps) {
     setDRegion(filters.region)
     setDVoice(filters.voice === true)
     setDLangs(langs)
-    setDQueue(queueOnly)
     setSheetOpen(true)
   }
   function applySheet() {
     onApplyFilters({ role: dRole.length ? dRole : null, rankFloor: dFloor, rankCeiling: filters.rankCeiling ?? null, voice: dVoice ? true : null, region: dRegion })
     setLangs(dLangs)
-    setQueueOnly(dQueue)
     setSheetOpen(false)
   }
-  function resetSheet() { setDRole([]); setDFloor(null); setDRegion(null); setDVoice(false); setDLangs([]); setDQueue(false) }
+  function resetSheet() { setDRole([]); setDFloor(null); setDRegion(null); setDVoice(false); setDLangs([]) }
   function toggleArr(arr: string[], v: string) { return arr.includes(v) ? arr.filter(x => x !== v) : [...arr, v] }
 
   // L'icône filtre de la topbar mobile (DTopBar) ouvre ce même bottom-sheet
@@ -840,11 +836,10 @@ function DuoFeedMobile(props: MobileProps) {
     window.addEventListener('rgg:open-duo-filters', h)
     return () => window.removeEventListener('rgg:open-duo-filters', h)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filters, langs, queueOnly])
+  }, [filters, langs])
 
-  // post-filtres locaux (langues + en file) — RPC ne les gère pas
+  // post-filtre local langues — la RPC ne le gère pas
   const shown = items.filter(it => {
-    if (queueOnly && !onlineIds.has(it.candidate_id)) return false
     if (langs.length) {
       const cl = it.profile?.matching_prefs?.languages ?? []
       if (!langs.some(l => cl.includes(l))) return false
@@ -853,11 +848,11 @@ function DuoFeedMobile(props: MobileProps) {
   })
   const fit = shown.filter(i => !i.is_degraded)
   const degraded = shown.filter(i => i.is_degraded)
-  const badge = chips.length + langs.length + (queueOnly ? 1 : 0)
+  const badge = chips.length + langs.length
 
   function clearAll() {
     onApplyFilters({ role: null, rankFloor: null, rankCeiling: null, voice: null, region: null })
-    setLangs([]); setQueueOnly(false)
+    setLangs([])
   }
 
   return (
@@ -900,7 +895,7 @@ function DuoFeedMobile(props: MobileProps) {
               Filtres
               {badge > 0 && <span style={{ minWidth: 16, height: 16, padding: '0 4px', borderRadius: 8, background: T.violet, color: '#08051a', fontSize: 9, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>{badge}</span>}
             </button>
-            {(chips.length > 0 || langs.length > 0 || queueOnly) && (
+            {(chips.length > 0 || langs.length > 0) && (
               <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap', width: '100%' }}>
                 {chips.map(chip => {
                   const isRole = !!chip.role
@@ -923,14 +918,6 @@ function DuoFeedMobile(props: MobileProps) {
                     </button>
                   </span>
                 ))}
-                {queueOnly && (
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 7px 6px 11px', borderRadius: 999, background: `${T.live}1f`, border: `1px solid ${T.live}66`, color: T.live, fontFamily: T.mono, fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-                    EN FILE
-                    <button onClick={() => setQueueOnly(false)} style={{ width: 16, height: 16, borderRadius: '50%', border: 'none', padding: 0, cursor: 'pointer', background: `${T.live}26`, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke={T.live} strokeWidth="3.2" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12" /></svg>
-                    </button>
-                  </span>
-                )}
               </div>
             )}
           </div>
@@ -1022,9 +1009,9 @@ function DuoFeedMobile(props: MobileProps) {
           ))}
         </MFsec>
         <MToggle on={dVoice} onClick={() => setDVoice(v => !v)} title="Vocal obligatoire" hint="Uniquement les joueurs avec micro" />
-        <MToggle on={dQueue} onClick={() => setDQueue(v => !v)} title="En file maintenant" hint="Disponibles pour jouer tout de suite" />
 
-        <div style={{ display: 'flex', gap: 10, marginTop: 22 }}>
+        {/* Footer CTA — sticky en bas du sheet (toujours visible, sans scroller) */}
+        <div style={{ display: 'flex', gap: 10, position: 'sticky', bottom: 0, marginTop: 22, paddingTop: 14, paddingBottom: 4, background: 'linear-gradient(180deg, transparent, var(--bg) 38%)' }}>
           <button onClick={resetSheet} style={{ flexShrink: 0, padding: '0 18px', height: 50, borderRadius: 13, background: 'rgba(255,255,255,0.04)', border: `1px solid ${T.lineStrong}`, color: T.text, fontFamily: T.display, fontSize: 12, letterSpacing: '0.06em', textTransform: 'uppercase', cursor: 'pointer' }}>Réinit.</button>
           <button onClick={applySheet} style={{ flex: 1, height: 50, borderRadius: 13, border: 'none', cursor: 'pointer', background: `linear-gradient(135deg, ${T.cyan}, ${T.violet})`, color: '#001018', fontFamily: T.display, fontSize: 13, letterSpacing: '0.06em', textTransform: 'uppercase', fontWeight: 700, boxShadow: `0 12px 30px -14px ${T.cyan}` }}>Voir {fit.length} résultat{fit.length > 1 ? 's' : ''}</button>
         </div>
