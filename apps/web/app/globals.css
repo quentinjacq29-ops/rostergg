@@ -275,6 +275,14 @@
   .rgg-bottom-nav-inner { max-width: 430px !important; margin: 0 auto !important; }
 }
 
+/* Profil joueur /u/:riotId : desktop ≥860px ⇆ mobile ≤859px */
+.rgg-pp-mobile { display: none; }
+@media (max-width: 859px) {
+  .rgg-pp-chrome-desktop { display: none !important; }
+  .rgg-pp-desktop        { display: none !important; }
+  .rgg-pp-mobile         { display: block !important; }
+}
+
 /* Demande de duo : modal centré ≥860px ⇆ bottom-sheet ≤859px */
 .rgg-dr-grab { display: none; }
 @media (max-width: 859px) {

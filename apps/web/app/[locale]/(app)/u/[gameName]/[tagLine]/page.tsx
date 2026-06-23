@@ -8,6 +8,7 @@ import { profileIconUrl } from '@/lib/riot/assets'
 import SendDuoRequestButton from '@/components/profile/SendDuoRequestButton'
 import type { DuoRequestTarget } from '@/components/duo/DuoRequestModal'
 import DTopBar from '@/components/layout/DTopBar'
+import { ProfileMobileNav, ProfileMobileCTA } from '@/components/profile/PlayerProfileMobileChrome'
 
 const T = {
   bg: '#0a0c14', surface: '#0f121c', elevated: '#161a26',
@@ -327,6 +328,14 @@ export default async function PlayerProfilePage({ params }: Props) {
     match: displayMatch, hue,
   }
 
+  const authed = !!user && user.id !== ra.profile_id
+  const moreTarget = authed ? {
+    profileId: ra.profile_id,
+    displayName: profile?.display_name ?? ra.game_name,
+    riotId: revealedRiotId,
+    isBookmarked,
+  } : null
+
   const rolesWithPool = mainRoles.filter(r => (champPool[r] ?? []).length > 0)
   const totalChamps   = Object.values(champPool).reduce((n, arr) => n + arr.length, 0)
 
@@ -345,22 +354,22 @@ export default async function PlayerProfilePage({ params }: Props) {
   return (
     <div style={{ height:'100%', display:'flex', flexDirection:'column', overflow:'hidden', background:T.bg, color:T.text, fontFamily:T.body }}>
 
-      {/* ══ DTopBar ══════════════════════════════════════════════════════════════ */}
-      <DTopBar
-        eyebrow="PLAYER PROFILE · FROM YOUR TOP DUOS"
-        title={ra.game_name.toUpperCase()}
-        accent={T.cyan}
-        locale={params.locale}
-        target={user && user.id !== ra.profile_id ? {
-          profileId:    ra.profile_id,
-          displayName:  profile?.display_name ?? ra.game_name,
-          riotId:       revealedRiotId,
-          isBookmarked,
-        } : undefined}
-      />
+      {/* ══ DTopBar — desktop uniquement (≥860px) ════════════════════════════════ */}
+      <div className="rgg-pp-chrome-desktop">
+        <DTopBar
+          eyebrow="PLAYER PROFILE · FROM YOUR TOP DUOS"
+          title={ra.game_name.toUpperCase()}
+          accent={T.cyan}
+          locale={params.locale}
+          target={moreTarget ?? undefined}
+        />
+      </div>
 
       {/* ══ Contenu scrollable ═══════════════════════════════════════════════════ */}
       <div style={{ flex:1, overflowY:'auto' }}>
+
+        {/* ════════ DESKTOP (≥860px) ════════ */}
+        <div className="rgg-pp-desktop">
 
         {/* HERO BAND */}
         <div style={{ position:'relative', padding:'30px 36px 26px', borderBottom:`1px solid ${T.line}`, overflow:'hidden' }}>
@@ -515,6 +524,146 @@ export default async function PlayerProfilePage({ params }: Props) {
             )}
 
           </div>
+        </div>
+        </div>{/* ════ /DESKTOP ════ */}
+
+        {/* ════════ MOBILE (≤859px) ════════ */}
+        <div className="rgg-pp-mobile" style={{ paddingBottom: 104 }}>
+          <ProfileMobileNav authed={authed} more={moreTarget} />
+
+          {/* HERO */}
+          <header style={{ position:'relative', padding:'24px 18px 20px', borderBottom:`1px solid ${T.line}`, overflow:'hidden' }}>
+            <div style={{ position:'absolute', top:-60, left:-40, width:280, height:200, background:`radial-gradient(circle, ${T.cyan}38, transparent 70%)`, filter:'blur(46px)', pointerEvents:'none' }} />
+            <div style={{ position:'absolute', top:-40, right:-30, width:240, height:180, background:`radial-gradient(circle, ${T.violet}30, transparent 70%)`, filter:'blur(46px)', pointerEvents:'none' }} />
+            <div style={{ position:'relative', display:'flex', alignItems:'center', gap:16 }}>
+              <div style={{ position:'relative', width:80, height:80, flexShrink:0 }}>
+                <Avatar initials={initials} size={80} rank={rankKey ?? 'iron'} hue={hue} online={false} />
+                {ra.profile_icon_id && <img src={profileIconUrl(ra.profile_icon_id)} alt="" style={{ position:'absolute', inset:0, width:'100%', height:'100%', borderRadius:'50%', objectFit:'cover' }} />}
+              </div>
+              <div style={{ flex:1, minWidth:0 }}>
+                <h1 style={{ margin:0, fontFamily:T.display, fontSize:30, letterSpacing:'0.02em', lineHeight:1, color:T.text }}>{ra.game_name}</h1>
+                <span style={{ fontFamily:T.mono, fontSize:11, color:T.textDim, marginTop:6, display:'block' }}>#{ra.tag_line}</span>
+              </div>
+            </div>
+            <div style={{ position:'relative', display:'flex', alignItems:'center', gap:7, marginTop:16, flexWrap:'wrap' }}>
+              <Pill accent={rkColor}>{rankLabelStr()}</Pill>
+              {mainRole && (
+                <span style={{ display:'inline-flex', alignItems:'center', gap:5, padding:'5px 10px', borderRadius:999, border:`1px solid ${rcMain}`, color:rcMain, fontFamily:T.mono, fontSize:10, fontWeight:700, letterSpacing:'0.06em' }}>
+                  {ROLE_META[mainRole]?.name ?? mainRole}<span style={{ fontSize:7.5, padding:'1px 4px', borderRadius:4, background:rcMain, color:T.bg, letterSpacing:'0.1em' }}>MAIN</span>
+                </span>
+              )}
+              {secondaryRole && (
+                <span style={{ display:'inline-flex', alignItems:'center', gap:5, padding:'5px 10px', borderRadius:999, border:`1px solid ${rcSec}`, color:rcSec, fontFamily:T.mono, fontSize:10, fontWeight:700, letterSpacing:'0.06em' }}>
+                  {ROLE_META[secondaryRole]?.name ?? secondaryRole}<span style={{ fontSize:7.5, padding:'1px 4px', borderRadius:4, background:rcSec, color:T.bg, letterSpacing:'0.1em' }}>2ND</span>
+                </span>
+              )}
+              {lookingRole && <>
+                <span style={{ fontFamily:T.mono, fontSize:10, color:T.textDim }}>cherche</span>
+                <span style={{ display:'inline-flex', alignItems:'center', gap:5, padding:'5px 10px', borderRadius:999, border:`1px solid ${rcLook}`, color:rcLook, fontFamily:T.mono, fontSize:10, fontWeight:700, letterSpacing:'0.06em' }}>{ROLE_META[lookingRole]?.name ?? lookingRole}</span>
+              </>}
+              {languages.map((l,i) => <LangChip key={l} code={l} primary={i===0} />)}
+            </div>
+            <div style={{ position:'relative', display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:8, marginTop:18 }}>
+              {([
+                ['MATCH', displayMatch, '%', T.cyan],
+                ['WIN RATE', wr, '%', T.live],
+                ['KDA', kda, '', T.text],
+                ['GAMES', total > 0 ? total : PP.games, '', T.text],
+                ['PEAK', peakStr(), '', T.gold],
+                ['SERVEUR', ra.platform?.toUpperCase() ?? 'EUW', '', T.text],
+              ] as [string, string|number, string, string][]).map(([l,v,s,a]) => (
+                <div key={l} style={{ padding:'11px 12px', borderRadius:12, background:'rgba(255,255,255,0.03)', border:`1px solid ${T.line}` }}>
+                  <div style={{ fontFamily:T.mono, fontSize:8, color:T.textMute, letterSpacing:'0.16em' }}>{l}</div>
+                  <div style={{ display:'flex', alignItems:'baseline', gap:2, marginTop:5 }}>
+                    <span style={{ fontFamily:T.display, fontSize:l==='SERVEUR'?18:22, color:a, lineHeight:1 }}>{v}</span>
+                    {s && <span style={{ fontFamily:T.display, fontSize:12, color:a, opacity:0.7 }}>{s}</span>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </header>
+
+          {/* WHY YOU MATCH */}
+          <section style={{ padding:'20px 18px', borderBottom:`1px solid ${T.line}` }}>
+            <div style={{ fontFamily:T.mono, fontSize:10, color:T.cyan, letterSpacing:'0.2em', marginBottom:13 }}>◢ POURQUOI VOUS MATCHEZ</div>
+            <div style={{ borderRadius:16, padding:18, background:`linear-gradient(135deg, ${T.cyan}1f, ${T.violet}1f)`, border:`1px solid ${T.cyan}47` }}>
+              <div style={{ display:'flex', alignItems:'center', gap:14, marginBottom:14 }}>
+                <MatchRing value={displayMatch} size={68} stroke={6} accent={T.cyan} accent2={T.violet} />
+                <p style={{ margin:0, fontFamily:T.body, fontSize:13, color:T.textDim, lineHeight:1.5 }}>Top compatibilité cette semaine. Rôles complémentaires, même tranche d&apos;elo, créneaux qui se recoupent.</p>
+              </div>
+              <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+                <DSynergy label="Rôle" value={displayBd.role} note={displayNotes.role} color={T.cyan} />
+                <DSynergy label="Elo" value={displayBd.elo} note={displayNotes.elo} color={T.live} />
+                <DSynergy label="Horaires" value={displayBd.schedule} note={displayNotes.schedule} color={T.violet} />
+                <DSynergy label="Langues" value={displayBd.langs} note={displayNotes.langs} color={T.gold} />
+                <DSynergy label="Style" value={displayBd.style} note={displayNotes.style} color={T.danger} />
+              </div>
+            </div>
+          </section>
+
+          {/* À PROPOS */}
+          <section style={{ padding:'20px 18px', borderBottom:`1px solid ${T.line}` }}>
+            <div style={{ fontFamily:T.mono, fontSize:10, color:T.cyan, letterSpacing:'0.2em', marginBottom:13 }}>◢ À PROPOS</div>
+            <p style={{ margin:0, fontFamily:T.body, fontSize:14, color:T.textDim, lineHeight:1.6 }}>&ldquo;{pitch}&rdquo;</p>
+          </section>
+
+          {/* CHAMPION POOL */}
+          {rolesWithPool.length > 0 && (
+            <section style={{ padding:'20px 18px', borderBottom:`1px solid ${T.line}` }}>
+              <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:13 }}>
+                <span style={{ fontFamily:T.mono, fontSize:10, color:T.cyan, letterSpacing:'0.2em' }}>◢ CHAMPION POOL</span>
+                <span style={{ fontFamily:T.mono, fontSize:9, color:T.textMute, letterSpacing:'0.1em' }}>{totalChamps} CHAMPS · {rolesWithPool.length} RÔLE{rolesWithPool.length>1?'S':''}</span>
+              </div>
+              <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
+                {rolesWithPool.map((r,i) => (
+                  <PoolGroup key={r} role={r} label={i===0?'PRINCIPAL':'SECONDAIRE'} champIds={champPool[r]??[]} masteryMap={masteryForPool(champPool[r]??[])} />
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* STYLE DE JEU */}
+          {styleChips.length > 0 && (
+            <section style={{ padding:'20px 18px', borderBottom:`1px solid ${T.line}` }}>
+              <div style={{ fontFamily:T.mono, fontSize:10, color:T.cyan, letterSpacing:'0.2em', marginBottom:13 }}>◢ STYLE DE JEU</div>
+              <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
+                {styleChips.map(s => <Pill key={s} accent={s.toLowerCase()==='tryhard'?T.danger:T.cyan}>{s}</Pill>)}
+                <Pill dim>RANKED SOLO/DUO</Pill>
+              </div>
+            </section>
+          )}
+
+          {/* DISPONIBILITÉS */}
+          {(avail ?? []).length > 0 && (
+            <section style={{ padding:'20px 18px', borderBottom:`1px solid ${T.line}` }}>
+              <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:13 }}>
+                <span style={{ fontFamily:T.mono, fontSize:10, color:T.cyan, letterSpacing:'0.2em' }}>◢ DISPONIBILITÉS</span>
+                <span style={{ fontFamily:T.mono, fontSize:9, color:T.textMute, letterSpacing:'0.1em' }}>FUSEAU EUROPE/PARIS</span>
+              </div>
+              <AvailHeatRead slots={avail ?? []} />
+            </section>
+          )}
+
+          {/* ÉQUIPES */}
+          {teams.length > 0 && (
+            <section style={{ padding:'20px 18px' }}>
+              <div style={{ fontFamily:T.mono, fontSize:10, color:T.cyan, letterSpacing:'0.2em', marginBottom:13 }}>◢ ÉQUIPES</div>
+              <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+                {teams.map(t => (
+                  <div key={t.id} style={{ display:'flex', alignItems:'center', gap:13, borderRadius:14, padding:13, background:'rgba(255,255,255,0.025)', border:`1px solid ${T.line}` }}>
+                    <TeamCrest c1={t.c1} c2={t.c2} tag={t.tag} size={42} />
+                    <div style={{ flex:1, minWidth:0 }}>
+                      <div style={{ fontFamily:T.display, fontSize:16, color:T.text, letterSpacing:'0.03em', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{t.name}</div>
+                      <div style={{ fontFamily:T.mono, fontSize:9, color:T.textDim, letterSpacing:'0.1em', marginTop:3 }}>{t.role ? `${t.role.toUpperCase()} · ` : ''}{t.badge}</div>
+                    </div>
+                    <span style={{ fontFamily:T.mono, fontSize:9, letterSpacing:'0.1em', padding:'4px 9px', borderRadius:6, color:t.c1, background:`${t.c1}1c`, border:`1px solid ${t.c1}55` }}>{t.badge}</span>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+
+          <ProfileMobileCTA target={target} authed={authed} />
         </div>
       </div>
     </div>
