@@ -564,6 +564,7 @@ type MobileProps = {
   removeChip: (id: string) => void
   onApplyFilters: (f: Filters) => void
   onRetry: () => void
+  previewCount: (f: Filters) => Promise<number>
   selectedId: string | null
   onToggleCard: (id: string) => void
   detailPool: Record<string, string[]>
@@ -801,7 +802,7 @@ function MCard({ item, online, expanded, pool, request, onToggle, onOpenRequest,
 }
 
 function DuoFeedMobile(props: MobileProps) {
-  const { items, loading, error, onlineIds, filters, chips, removeChip, onApplyFilters, onRetry,
+  const { items, loading, error, onlineIds, filters, chips, removeChip, onApplyFilters, onRetry, previewCount,
     selectedId, onToggleCard, detailPool, detailRequest, onOpenRequest, onAccept, onDecline, onMessage, onSkip } = props
 
   const [mode, setMode] = useState<'duo' | 'teams' | '1v1'>('duo')
@@ -813,6 +814,7 @@ function DuoFeedMobile(props: MobileProps) {
   const [dRegion, setDRegion] = useState<string | null>(null)
   const [dVoice, setDVoice] = useState(false)
   const [dLangs, setDLangs] = useState<string[]>([])
+  const [previewN, setPreviewN] = useState<number | null>(null)
 
   function openSheet() {
     setDRole(filters.role ?? [])
@@ -837,6 +839,18 @@ function DuoFeedMobile(props: MobileProps) {
     return () => window.removeEventListener('rgg:open-duo-filters', h)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filters, langs])
+
+  // Compte de preview live : recalcule combien de matchs donnerait le brouillon
+  // de filtres pendant que le sheet est ouvert (debounce 300ms).
+  useEffect(() => {
+    if (!sheetOpen) { setPreviewN(null); return }
+    const t = setTimeout(async () => {
+      const n = await previewCount({ role: dRole.length ? dRole : null, rankFloor: dFloor, rankCeiling: filters.rankCeiling ?? null, voice: dVoice ? true : null, region: dRegion })
+      setPreviewN(n)
+    }, 300)
+    return () => clearTimeout(t)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sheetOpen, dRole, dFloor, dRegion, dVoice])
 
   // post-filtre local langues — la RPC ne le gère pas
   const shown = items.filter(it => {
@@ -1020,7 +1034,7 @@ function DuoFeedMobile(props: MobileProps) {
         {/* Footer CTA — sticky en bas du sheet (toujours visible, sans scroller) */}
         <div style={{ display: 'flex', gap: 10, position: 'sticky', bottom: 0, marginTop: 22, paddingTop: 14, paddingBottom: 4, background: 'linear-gradient(180deg, transparent, var(--bg) 38%)' }}>
           <button onClick={resetSheet} style={{ flexShrink: 0, padding: '0 18px', height: 50, borderRadius: 13, background: 'rgba(255,255,255,0.04)', border: `1px solid ${T.lineStrong}`, color: T.text, fontFamily: T.display, fontSize: 12, letterSpacing: '0.06em', textTransform: 'uppercase', cursor: 'pointer' }}>Réinit.</button>
-          <button onClick={applySheet} style={{ flex: 1, height: 50, borderRadius: 13, border: 'none', cursor: 'pointer', background: `linear-gradient(135deg, ${T.cyan}, ${T.violet})`, color: '#001018', fontFamily: T.display, fontSize: 13, letterSpacing: '0.06em', textTransform: 'uppercase', fontWeight: 700, boxShadow: `0 12px 30px -14px ${T.cyan}` }}>Voir {fit.length} résultat{fit.length > 1 ? 's' : ''}</button>
+          <button onClick={applySheet} style={{ flex: 1, height: 50, borderRadius: 13, border: 'none', cursor: 'pointer', background: `linear-gradient(135deg, ${T.cyan}, ${T.violet})`, color: '#001018', fontFamily: T.display, fontSize: 13, letterSpacing: '0.06em', textTransform: 'uppercase', fontWeight: 700, boxShadow: `0 12px 30px -14px ${T.cyan}` }}>Voir {previewN ?? fit.length} résultat{(previewN ?? fit.length) > 1 ? 's' : ''}</button>
         </div>
       </aside>
 
@@ -1145,6 +1159,23 @@ export default function DuoFeed({
   }, [userId, filters]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => { loadFeed() }, [loadFeed])
+
+  // Compte de preview pour le bottom-sheet de filtres mobile : combien de matchs
+  // donneraient les filtres BROUILLON (avant d'appliquer). Compte les non-dégradés.
+  const previewCount = useCallback(async (f: Filters): Promise<number> => {
+    if (!userId) return 0
+    const { data, error: e } = await supabase.rpc('duo_feed', {
+      p_user_id:      userId,
+      p_role_filters: f.role       ?? null,
+      p_rank_floor:   f.rankFloor ?? undefined,
+      p_rank_ceiling: f.rankCeiling ?? undefined,
+      p_voice:        f.voice     ?? undefined,
+      p_region:       f.region    ?? undefined,
+      p_limit: 100, p_offset: 0,
+    })
+    if (e || !Array.isArray(data)) return 0
+    return (data as FeedRow[]).filter(r => !r.is_degraded).length
+  }, [userId])
 
   // ── Persistance des filtres dans matching_prefs (modèle bidirectionnel §4.8) :
   // filtrer dans /duo met à jour mes préférences de recherche → affecte mon feed
@@ -1461,6 +1492,7 @@ export default function DuoFeed({
         removeChip={removeChip}
         onApplyFilters={setFilters}
         onRetry={loadFeed}
+        previewCount={previewCount}
         selectedId={expandedId}
         onToggleCard={id => { setExpandedId(prev => (prev === id ? null : id)); setSelectedId(id) }}
         detailPool={detailPool}
