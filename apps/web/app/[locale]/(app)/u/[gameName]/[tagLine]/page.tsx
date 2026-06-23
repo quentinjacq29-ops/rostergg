@@ -10,6 +10,8 @@ import SendDuoRequestButton from '@/components/profile/SendDuoRequestButton'
 import type { DuoRequestTarget } from '@/components/duo/DuoRequestModal'
 import DTopBar from '@/components/layout/DTopBar'
 import { ProfileMobileNav, ProfileMobileCTA } from '@/components/profile/PlayerProfileMobileChrome'
+import { createClient as createAdminClient } from '@supabase/supabase-js'
+import { getRecentMatches, type RecentMatch } from '@/lib/riot/matchHistory'
 
 const T = {
   bg: '#0a0c14', surface: '#0f121c', elevated: '#161a26',
@@ -172,6 +174,18 @@ function nameHue(s: string) {
   let h = 0; for (const c of s) h = (h * 31 + c.charCodeAt(0)) % 360; return h
 }
 
+function timeAgo(iso: string): string {
+  const min = Math.floor((Date.now() - new Date(iso).getTime()) / 60000)
+  if (min < 60) return `${Math.max(1, min)}min`
+  const h = Math.floor(min / 60)
+  if (h < 24) return `${h}h`
+  const d = Math.floor(h / 24)
+  return d === 1 ? 'Hier' : `${d}j`
+}
+function fmtDuration(sec: number): string {
+  return `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`
+}
+
 type Props = { params: { locale: string; gameName: string; tagLine: string } }
 
 // Profil joueur public → indexable SEO (titre/description par joueur)
@@ -196,7 +210,7 @@ export default async function PlayerProfilePage({ params }: Props) {
 
   const { data: ra } = await supabase
     .from('riot_accounts')
-    .select('id, profile_id, game_name, tag_line, profile_icon_id, platform')
+    .select('id, profile_id, game_name, tag_line, profile_icon_id, platform, puuid')
     .ilike('game_name', gn).ilike('tag_line', tl).maybeSingle()
   if (!ra) notFound()
 
@@ -334,8 +348,26 @@ export default async function PlayerProfilePage({ params }: Props) {
   // ABOUT — toujours afficher
   const pitch = profile?.bio ?? PP.pitch
 
-  // KDA — fallback PP jusqu'à connexion Match-V5
-  const kda = PP.kda
+  // ── Parties récentes (Match-V5, lazy cache — best effort)
+  let recentMatches: RecentMatch[] = []
+  if (process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    try {
+      const admin = createAdminClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, { auth: { persistSession: false } })
+      recentMatches = await getRecentMatches(admin, { id: ra.id, puuid: ra.puuid ?? null, platform: ra.platform })
+    } catch { /* best effort */ }
+  }
+  const recentWins   = recentMatches.filter(m => m.win).length
+  const recentLosses = recentMatches.length - recentWins
+
+  // KDA — réel depuis les parties récentes, fallback PP sinon
+  const kda = recentMatches.length
+    ? (() => {
+        const k = recentMatches.reduce((n, m) => n + m.kills, 0)
+        const d = recentMatches.reduce((n, m) => n + m.deaths, 0)
+        const a = recentMatches.reduce((n, m) => n + m.assists, 0)
+        return (d === 0 ? k + a : (k + a) / d).toFixed(1)
+      })()
+    : PP.kda
 
   const target: DuoRequestTarget & { profileId: string } = {
     profileId: ra.profile_id, name: ra.game_name, tag: `#${ra.tag_line}`,
@@ -492,6 +524,25 @@ export default async function PlayerProfilePage({ params }: Props) {
             {(avail ?? []).length > 0 && (
               <PPSection label="AVAILABILITY · THIS WEEK">
                 <PPCard><AvailHeatRead slots={avail ?? []} /></PPCard>
+              </PPSection>
+            )}
+
+            {/* 3b. RECENT GAMES */}
+            {recentMatches.length > 0 && (
+              <PPSection label="RECENT GAMES" right={<span style={{ fontFamily:T.mono, fontSize:9, color:T.live, letterSpacing:'0.1em' }}>{recentWins}V · {recentLosses}D</span>}>
+                <PPCard pad={6}>
+                  {recentMatches.map((m, i) => (
+                    <div key={m.matchId} style={{ display:'flex', alignItems:'center', gap:12, padding:'11px 12px', borderTop: i===0 ? 'none' : `1px solid ${T.line}` }}>
+                      <span style={{ width:24, height:24, borderRadius:7, fontFamily:T.display, fontSize:12, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, color: m.win?T.live:T.danger, background:`${m.win?T.live:T.danger}24`, border:`1px solid ${(m.win?T.live:T.danger)}66` }}>{m.win?'W':'L'}</span>
+                      <ChampionTile champKey={m.championKey} size={36} />
+                      <div style={{ minWidth:0 }}>
+                        <div style={{ fontFamily:T.mono, fontSize:12.5, color:T.text }}>{m.kills}/{m.deaths}/{m.assists}</div>
+                        <div style={{ fontFamily:T.mono, fontSize:9, color:T.textMute, marginTop:2 }}>{m.cs} CS</div>
+                      </div>
+                      <span style={{ marginLeft:'auto', fontFamily:T.mono, fontSize:10, color:T.textMute, textAlign:'right' }}>{fmtDuration(m.duration)} · {timeAgo(m.gameEnd)}</span>
+                    </div>
+                  ))}
+                </PPCard>
               </PPSection>
             )}
 
@@ -657,6 +708,27 @@ export default async function PlayerProfilePage({ params }: Props) {
                 <span style={{ fontFamily:T.mono, fontSize:9, color:T.textMute, letterSpacing:'0.1em' }}>FUSEAU EUROPE/PARIS</span>
               </div>
               <AvailHeatRead slots={avail ?? []} />
+            </section>
+          )}
+
+          {/* PARTIES RÉCENTES */}
+          {recentMatches.length > 0 && (
+            <section style={{ padding:'20px 18px', borderBottom:`1px solid ${T.line}` }}>
+              <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:13 }}>
+                <span style={{ fontFamily:T.mono, fontSize:10, color:T.cyan, letterSpacing:'0.2em' }}>◢ PARTIES RÉCENTES</span>
+                <span style={{ fontFamily:T.mono, fontSize:9, color:T.live, letterSpacing:'0.1em' }}>{recentWins}V · {recentLosses}D · {recentMatches.length} DERNIÈRES</span>
+              </div>
+              {recentMatches.map((m, i) => (
+                <div key={m.matchId} style={{ display:'flex', alignItems:'center', gap:12, padding:'11px 0', borderTop: i===0 ? 'none' : `1px solid ${T.line}` }}>
+                  <span style={{ width:24, height:24, borderRadius:7, fontFamily:T.display, fontSize:12, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, color: m.win?T.live:T.danger, background:`${m.win?T.live:T.danger}24`, border:`1px solid ${(m.win?T.live:T.danger)}66` }}>{m.win?'W':'L'}</span>
+                  <ChampionTile champKey={m.championKey} size={36} />
+                  <div style={{ minWidth:0 }}>
+                    <div style={{ fontFamily:T.mono, fontSize:12.5, color:T.text }}>{m.kills}/{m.deaths}/{m.assists}</div>
+                    <div style={{ fontFamily:T.mono, fontSize:9, color:T.textMute, marginTop:2 }}>{m.cs} CS</div>
+                  </div>
+                  <span style={{ marginLeft:'auto', fontFamily:T.mono, fontSize:10, color:T.textMute, textAlign:'right' }}>{fmtDuration(m.duration)} · {timeAgo(m.gameEnd)}</span>
+                </div>
+              ))}
             </section>
           )}
 

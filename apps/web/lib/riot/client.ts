@@ -91,6 +91,33 @@ export function getChampionMastery(puuid: string, platform: string, count = 10) 
   )
 }
 
+// ── MATCH-V5 (routing régional : europe / americas / asia) ──────────────────
+export type RiotMatchParticipant = {
+  puuid: string; championId: number; championName: string
+  kills: number; deaths: number; assists: number
+  totalMinionsKilled: number; neutralMinionsKilled: number
+  win: boolean; teamPosition?: string
+}
+export type RiotMatch = {
+  metadata: { matchId: string }
+  info: {
+    gameCreation: number; gameEndTimestamp?: number; gameDuration: number
+    queueId: number; participants: RiotMatchParticipant[]
+  }
+}
+
+export function getMatchIdsByPuuid(puuid: string, region: string, count = 5) {
+  return riotFetch<string[]>(
+    `https://${region}.api.riotgames.com/lol/match/v5/matches/by-puuid/${puuid}/ids?count=${count}`
+  )
+}
+
+export function getMatch(matchId: string, region: string) {
+  return riotFetch<RiotMatch>(
+    `https://${region}.api.riotgames.com/lol/match/v5/matches/${matchId}`
+  )
+}
+
 export async function getChampionMap(): Promise<Map<number, { key: string; name: string }>> {
   const versions = await ddFetch<string[]>('https://ddragon.leagueoflegends.com/api/versions.json')
   const version  = versions[0]
