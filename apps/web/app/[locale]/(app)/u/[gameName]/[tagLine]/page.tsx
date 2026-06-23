@@ -1,3 +1,4 @@
+import type { Metadata } from 'next'
 import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import Avatar, { RANK_COLORS } from '@/components/ui/Avatar'
@@ -172,6 +173,21 @@ function nameHue(s: string) {
 }
 
 type Props = { params: { locale: string; gameName: string; tagLine: string } }
+
+// Profil joueur public → indexable SEO (titre/description par joueur)
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const gn = decodeURIComponent(params.gameName)
+  const tl = decodeURIComponent(params.tagLine)
+  return {
+    title: `${gn} #${tl} — Profil joueur`,
+    description: `Profil LoL de ${gn}#${tl} sur RosterGG : rang, rôles, champion pool, disponibilités et compatibilité duo. Trouve un duo compatible.`,
+    robots: { index: true, follow: true },
+    openGraph: {
+      title: `${gn} #${tl} · RosterGG`,
+      description: `Rang, champion pool et compatibilité duo de ${gn}#${tl}.`,
+    },
+  }
+}
 
 export default async function PlayerProfilePage({ params }: Props) {
   const supabase = await createClient()
