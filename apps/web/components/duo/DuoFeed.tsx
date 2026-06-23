@@ -757,6 +757,17 @@ function MCard({ item, online, expanded, pool, request, onToggle, onOpenRequest,
               </div>
             )}
 
+            {/* CTA "Voir le profil complet" — sous les tags, au-dessus des actions (delta lot 1) */}
+            {p?.riot_accounts?.game_name && p?.riot_accounts?.tag_line && (
+              <a
+                href={`/u/${encodeURIComponent(p.riot_accounts.game_name)}/${encodeURIComponent(p.riot_accounts.tag_line)}`}
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, marginTop: 16, padding: 11, minHeight: 44, boxSizing: 'border-box', borderRadius: 11, background: 'rgba(255,255,255,0.03)', border: `1px solid ${T.lineStrong}`, color: T.textDim, fontFamily: T.mono, fontSize: 11, letterSpacing: '0.06em', textTransform: 'uppercase', textDecoration: 'none' }}
+              >
+                Voir le profil complet
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
+              </a>
+            )}
+
             {/* actions */}
             <div style={{ marginTop: 20, display: 'flex', alignItems: 'center', gap: 8 }}>
               <button onClick={() => onSkip(item.candidate_id)} aria-label="Passer" style={{ width: 48, height: 48, flexShrink: 0, borderRadius: 13, background: 'rgba(255,255,255,0.04)', border: `1px solid ${T.lineStrong}`, color: T.textDim, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
