@@ -29,7 +29,7 @@ export async function getRecentMatches(
       const lastMs = last ? new Date(last).getTime() : 0
       if (Date.now() - lastMs > SYNC_TTL_MS) await syncMatches(admin, ra)
     }
-  } catch { /* sync best-effort, on ignore */ }
+  } catch { /* sync best-effort (Riot indispo / rate-limit) → on lit le cache */ }
 
   // 2. Lecture du cache
   try {
@@ -37,6 +37,7 @@ export async function getRecentMatches(
       .from('match_history')
       .select('match_id, champion_key, kills, deaths, assists, cs, win, duration, game_end')
       .eq('riot_account_id', ra.id)
+      .not('champion_key', 'is', null)
       .order('game_end', { ascending: false })
       .limit(5)
     return (data ?? []).map((m: Record<string, unknown>) => ({

@@ -30,3 +30,9 @@ drop policy if exists match_history_select_public on public.match_history;
 create policy match_history_select_public on public.match_history for select using (true);
 
 grant select on public.match_history to anon, authenticated;
+
+-- Le sync (déclenché côté serveur quand on consulte un profil) écrit via service_role.
+-- Dans ce projet le service_role est lecture seule par défaut → on lui ouvre l'écriture
+-- sur cette table + la colonne de throttle uniquement.
+grant select, insert, update on public.match_history to service_role;
+grant update (last_match_sync) on public.riot_accounts to service_role;
