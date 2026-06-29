@@ -275,6 +275,22 @@
   .rgg-bottom-nav-inner { max-width: 430px !important; margin: 0 auto !important; }
 }
 
+/* Mon profil /me : desktop 2 colonnes (aperçu + form) ⇆ mobile pile */
+.rgg-me-topbar  { display: none; }
+.rgg-me-body    { padding: 26px 36px 40px; }
+.rgg-me-grid    { display: grid; grid-template-columns: 360px 1fr; gap: 28px; max-width: 1100px; margin: 0 auto; }
+.rgg-me-grid > div { min-width: 0; }
+.rgg-me-preview { position: sticky; top: 0; }
+.rgg-me-topbar-wrap { display: contents; } /* DTopBar = enfant direct du flex en desktop */
+@media (max-width: 859px) {
+  .rgg-me-topbar      { display: flex; }
+  .rgg-me-topbar-wrap { display: none; }   /* sur mobile, la topbar MON PROFIL remplace le DTopBar */
+  .rgg-me-toast       { display: none !important; }
+  .rgg-me-body        { padding: 16px 16px 32px; }
+  .rgg-me-grid        { grid-template-columns: 1fr; gap: 0; max-width: 430px; }
+  .rgg-me-preview     { position: static; }
+}
+
 /* Profil joueur /u/:riotId : desktop ≥860px ⇆ mobile ≤859px */
 .rgg-pp-mobile { display: none; }
 @media (max-width: 859px) {

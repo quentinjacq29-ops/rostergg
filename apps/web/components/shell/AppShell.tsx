@@ -318,12 +318,14 @@ export default function AppShell({
       {/* ── Main */}
       <main className="rgg-main" style={{ flex: 1, minWidth: 0, height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         {tbConfig && (
-          <DTopBar
-            eyebrow={tbConfig.eyebrow}
-            title={tbConfig.title}
-            accent={tbConfig.accent}
-            locale={locale}
-          />
+          // /me : DTopBar gardé en desktop, masqué en mobile (MeClient a sa propre topbar « MON PROFIL »)
+          pathname.includes('/me') ? (
+            <div className="rgg-me-topbar-wrap">
+              <DTopBar eyebrow={tbConfig.eyebrow} title={tbConfig.title} accent={tbConfig.accent} locale={locale} />
+            </div>
+          ) : (
+            <DTopBar eyebrow={tbConfig.eyebrow} title={tbConfig.title} accent={tbConfig.accent} locale={locale} />
+          )
         )}
         {children}
       </main>

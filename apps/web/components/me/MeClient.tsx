@@ -400,21 +400,30 @@ export default function MeClient(props: MeClientProps) {
 
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-      {/* Toast ENREGISTRÉ */}
+      {/* Topbar mobile (maquette) : titre + badge enregistré */}
+      <div className="rgg-me-topbar" style={{ position: 'sticky', top: 0, zIndex: 40, alignItems: 'center', gap: 10, padding: '13px 16px', background: 'rgba(8,10,16,0.92)', backdropFilter: 'blur(14px)', borderBottom: `1px solid ${T.line}` }}>
+        <h1 style={{ margin: 0, fontFamily: T.display, fontSize: 19, letterSpacing: '0.03em', color: T.text }}>MON PROFIL</h1>
+        <span style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: 6, fontFamily: T.mono, fontSize: 9, color: T.live, letterSpacing: '0.1em' }}>
+          <span style={{ width: 6, height: 6, borderRadius: '50%', background: T.live, boxShadow: `0 0 7px ${T.live}` }} />
+          ENREGISTRÉ
+        </span>
+      </div>
+
+      {/* Toast ENREGISTRÉ (desktop) */}
       {saved && (
-        <div style={{ position: 'fixed', bottom: 28, right: 28, zIndex: 400, display: 'inline-flex', alignItems: 'center', gap: 9, padding: '11px 18px', borderRadius: 12, background: 'rgba(0,255,157,0.1)', border: '1px solid rgba(0,255,157,0.35)', backdropFilter: 'blur(12px)', boxShadow: '0 4px 24px rgba(0,0,0,0.5)', fontFamily: T.mono, fontSize: 11, color: T.live, letterSpacing: '0.12em' }}>
+        <div className="rgg-me-toast" style={{ position: 'fixed', bottom: 28, right: 28, zIndex: 400, display: 'inline-flex', alignItems: 'center', gap: 9, padding: '11px 18px', borderRadius: 12, background: 'rgba(0,255,157,0.1)', border: '1px solid rgba(0,255,157,0.35)', backdropFilter: 'blur(12px)', boxShadow: '0 4px 24px rgba(0,0,0,0.5)', fontFamily: T.mono, fontSize: 11, color: T.live, letterSpacing: '0.12em' }}>
           <span style={{ width: 7, height: 7, borderRadius: '50%', background: T.live, boxShadow: `0 0 8px ${T.live}`, flexShrink: 0 }} />
           ENREGISTRÉ
         </div>
       )}
 
       {/* Body */}
-      <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '26px 36px 40px' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '360px 1fr', gap: 28, maxWidth: 1100, margin: '0 auto' }}>
+      <div className="rgg-me-body" style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
+        <div className="rgg-me-grid">
 
           {/* ── Colonne gauche : aperçu live ──────────────────────────── */}
           <div>
-            <div style={{ position: 'sticky', top: 0 }}>
+            <div className="rgg-me-preview">
               <div style={{ fontFamily: T.mono, fontSize: 10, color: T.textDim, letterSpacing: '0.22em', marginBottom: 14 }}>◢ APERÇU LIVE · CE QUE VOIENT LES AUTRES</div>
               <div style={{ position: 'relative', borderRadius: 18, overflow: 'hidden', background: `linear-gradient(180deg, ${T.surface}, ${T.bg})`, border: `1px solid ${T.line}` }}>
                 <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: `linear-gradient(90deg, transparent, ${T.cyan}, ${T.violet}, transparent)` }} />
@@ -649,6 +658,14 @@ export default function MeClient(props: MeClientProps) {
               <AvailHeatEdit grid={avGrid} onChange={updAvail} />
             </EditCard>
 
+            {/* Voir mon profil public */}
+            {props.gameName && props.tagLine && (
+              <a href={`/u/${encodeURIComponent(props.gameName)}/${encodeURIComponent(props.tagLine)}`}
+                style={{ height: 48, borderRadius: 13, background: 'rgba(255,255,255,0.05)', border: `1px solid ${T.lineStrong}`, color: T.text, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, textDecoration: 'none', fontFamily: T.display, fontSize: 13, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z" /><circle cx="12" cy="12" r="3" /></svg>
+                Voir mon profil public
+              </a>
+            )}
           </div>
         </div>
       </div>
