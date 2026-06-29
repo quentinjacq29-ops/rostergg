@@ -170,6 +170,29 @@ function AvailHeatRead({ slots }: { slots: { weekday: number; slot: number; inte
   )
 }
 
+// Heatmap matrice (maquette mobile : jours en haut, créneaux à gauche)
+function AvailHeatMatrix({ slots }: { slots: { weekday: number; slot: number; intensity: number }[] }) {
+  const DAYS = ['L', 'M', 'M', 'J', 'V', 'S', 'D']
+  const SLOTS = ['12h', '15h', '18h', '20h', '22h', '00h']
+  const heat = ['rgba(255,255,255,0.04)', `${T.cyan}38`, `${T.cyan}73`, `${T.cyan}c7`]
+  const at = (d: number, s: number) => slots.find(a => a.weekday === d && a.slot === s)?.intensity ?? 0
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: 'auto repeat(7,1fr)', gap: 4 }}>
+      <div />
+      {DAYS.map((d, i) => (
+        <div key={`h${i}`} style={{ fontFamily: T.mono, fontSize: 8, color: T.textMute, textAlign: 'center' }}>{d}</div>
+      ))}
+      {SLOTS.flatMap((sl, si) => [
+        <div key={`r${si}`} style={{ fontFamily: T.mono, fontSize: 8, color: T.textMute, display: 'flex', alignItems: 'center', paddingRight: 5 }}>{sl}</div>,
+        ...DAYS.map((_, di) => {
+          const v = at(di, si)
+          return <div key={`${si}-${di}`} style={{ aspectRatio: '1', borderRadius: 4, background: heat[v] ?? heat[0] }} />
+        }),
+      ])}
+    </div>
+  )
+}
+
 function nameHue(s: string) {
   let h = 0; for (const c of s) h = (h * 31 + c.charCodeAt(0)) % 360; return h
 }
@@ -222,7 +245,7 @@ export default async function PlayerProfilePage({ params }: Props) {
     { data: avail },
     { data: teamMemberships },
   ] = await Promise.all([
-    supabase.from('profiles').select('display_name, bio').eq('id', ra.profile_id).maybeSingle(),
+    supabase.from('profiles').select('display_name, bio, last_seen_at, show_online_status').eq('id', ra.profile_id).maybeSingle(),
     supabase.from('matching_prefs').select('main_roles,looking_for_roles,playstyles,languages,champion_pool,voice_required').eq('profile_id', ra.profile_id).maybeSingle(),
     supabase.from('ranks').select('tier,division,league_points,wins,losses,queue').eq('riot_account_id', ra.id),
     supabase.from('champion_mastery').select('champion_key,mastery_level,mastery_points').eq('riot_account_id', ra.id).order('mastery_points', { ascending: false }),
@@ -340,6 +363,34 @@ export default async function PlayerProfilePage({ params }: Props) {
     revealedRiotId = accepted ? `${ra.game_name}#${ra.tag_line}` : null
   }
 
+  // ── Duos en commun (mutuals) — partenaires acceptés partagés viewer ∩ profil
+  let mutuals: { initials: string; name: string; hue: number }[] = []
+  let mutualCount = 0
+  if (user && user.id !== ra.profile_id) {
+    const [{ data: mine }, { data: theirs }] = await Promise.all([
+      supabase.from('duo_requests').select('from_profile,to_profile').eq('status', 'accepted').or(`from_profile.eq.${user.id},to_profile.eq.${user.id}`),
+      supabase.from('duo_requests').select('from_profile,to_profile').eq('status', 'accepted').or(`from_profile.eq.${ra.profile_id},to_profile.eq.${ra.profile_id}`),
+    ])
+    const partnersOf = (rows: { from_profile: string; to_profile: string }[] | null, self: string) =>
+      new Set((rows ?? []).map(r => (r.from_profile === self ? r.to_profile : r.from_profile)))
+    const mySet = partnersOf(mine, user.id)
+    const theirSet = partnersOf(theirs, ra.profile_id)
+    const common = [...mySet].filter(id => theirSet.has(id) && id !== user.id && id !== ra.profile_id)
+    mutualCount = common.length
+    if (common.length) {
+      const { data: macc } = await supabase.from('riot_accounts').select('profile_id,game_name').in('profile_id', common.slice(0, 8))
+      mutuals = (macc ?? []).map(m => ({
+        initials: (m.game_name ?? '?').slice(0, 2).toUpperCase(),
+        name: m.game_name ?? '',
+        hue: nameHue(m.game_name ?? ''),
+      }))
+    }
+  }
+
+  // ── Présence : en ligne si vu il y a < 5 min et statut public activé
+  const online = !!profile?.show_online_status && !!profile?.last_seen_at &&
+    (Date.now() - new Date(profile.last_seen_at).getTime() < 5 * 60 * 1000)
+
   // Toujours afficher WHY YOU MATCH — fallback PP si pas de données réelles
   const displayMatch = matchScore ?? PP.match
   const displayBd    = bd    ?? PP.breakdown
@@ -426,7 +477,7 @@ export default async function PlayerProfilePage({ params }: Props) {
 
           <div style={{ position:'relative', display:'flex', alignItems:'center', gap:26 }}>
             <div style={{ position:'relative', flexShrink:0 }}>
-              <Avatar initials={initials} size={118} rank={rankKey ?? 'iron'} hue={hue} online={false} />
+              <Avatar initials={initials} size={118} rank={rankKey ?? 'iron'} hue={hue} online={online} />
               {ra.profile_icon_id && <img src={profileIconUrl(ra.profile_icon_id)} alt="" style={{ position:'absolute', inset:0, width:'100%', height:'100%', borderRadius:'50%', objectFit:'cover' }} />}
             </div>
 
@@ -604,11 +655,18 @@ export default async function PlayerProfilePage({ params }: Props) {
             <div style={{ position:'absolute', top:-40, right:-30, width:240, height:180, background:`radial-gradient(circle, ${T.violet}30, transparent 70%)`, filter:'blur(46px)', pointerEvents:'none' }} />
             <div style={{ position:'relative', display:'flex', alignItems:'center', gap:16 }}>
               <div style={{ position:'relative', width:80, height:80, flexShrink:0 }}>
-                <Avatar initials={initials} size={80} rank={rankKey ?? 'iron'} hue={hue} online={false} />
+                <Avatar initials={initials} size={80} rank={rankKey ?? 'iron'} hue={hue} online={online} />
                 {ra.profile_icon_id && <img src={profileIconUrl(ra.profile_icon_id)} alt="" style={{ position:'absolute', inset:0, width:'100%', height:'100%', borderRadius:'50%', objectFit:'cover' }} />}
               </div>
               <div style={{ flex:1, minWidth:0 }}>
-                <h1 style={{ margin:0, fontFamily:T.display, fontSize:30, letterSpacing:'0.02em', lineHeight:1, color:T.text }}>{ra.game_name}</h1>
+                <div style={{ display:'flex', alignItems:'center', gap:9, flexWrap:'wrap' }}>
+                  <h1 style={{ margin:0, fontFamily:T.display, fontSize:30, letterSpacing:'0.02em', lineHeight:1, color:T.text }}>{ra.game_name}</h1>
+                  {online && (
+                    <span style={{ display:'inline-flex', alignItems:'center', gap:6, fontFamily:T.mono, fontSize:9, letterSpacing:'0.1em', color:T.live }}>
+                      <i style={{ width:8, height:8, borderRadius:'50%', background:T.live, boxShadow:`0 0 8px ${T.live}` }} />EN LIGNE
+                    </span>
+                  )}
+                </div>
                 <span style={{ fontFamily:T.mono, fontSize:11, color:T.textDim, marginTop:6, display:'block' }}>#{ra.tag_line}</span>
               </div>
             </div>
@@ -707,7 +765,7 @@ export default async function PlayerProfilePage({ params }: Props) {
                 <span style={{ fontFamily:T.mono, fontSize:10, color:T.cyan, letterSpacing:'0.2em' }}>◢ DISPONIBILITÉS</span>
                 <span style={{ fontFamily:T.mono, fontSize:9, color:T.textMute, letterSpacing:'0.1em' }}>FUSEAU EUROPE/PARIS</span>
               </div>
-              <AvailHeatRead slots={avail ?? []} />
+              <AvailHeatMatrix slots={avail ?? []} />
             </section>
           )}
 
@@ -734,7 +792,7 @@ export default async function PlayerProfilePage({ params }: Props) {
 
           {/* ÉQUIPES */}
           {teams.length > 0 && (
-            <section style={{ padding:'20px 18px' }}>
+            <section style={{ padding:'20px 18px', borderBottom: mutuals.length ? `1px solid ${T.line}` : 'none' }}>
               <div style={{ fontFamily:T.mono, fontSize:10, color:T.cyan, letterSpacing:'0.2em', marginBottom:13 }}>◢ ÉQUIPES</div>
               <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
                 {teams.map(t => (
@@ -747,6 +805,30 @@ export default async function PlayerProfilePage({ params }: Props) {
                     <span style={{ fontFamily:T.mono, fontSize:9, letterSpacing:'0.1em', padding:'4px 9px', borderRadius:6, color:t.c1, background:`${t.c1}1c`, border:`1px solid ${t.c1}55` }}>{t.badge}</span>
                   </div>
                 ))}
+              </div>
+            </section>
+          )}
+
+          {/* DUOS EN COMMUN */}
+          {mutuals.length > 0 && (
+            <section style={{ padding:'20px 18px' }}>
+              <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:13 }}>
+                <span style={{ fontFamily:T.mono, fontSize:10, color:T.cyan, letterSpacing:'0.2em' }}>◢ DUOS EN COMMUN</span>
+                <span style={{ fontFamily:T.mono, fontSize:9, color:T.textMute, letterSpacing:'0.1em' }}>{mutualCount} EN COMMUN</span>
+              </div>
+              <div style={{ display:'flex', alignItems:'center', gap:13, borderRadius:14, padding:14, background:'rgba(255,255,255,0.025)', border:`1px solid ${T.line}` }}>
+                <div style={{ display:'flex' }}>
+                  {mutuals.slice(0, 3).map((m, i) => (
+                    <span key={i} style={{ width:38, height:38, marginLeft: i ? -12 : 0, borderRadius:'50%', border:`2px solid ${T.bg}`, boxShadow:`0 0 0 2px hsl(${m.hue} 70% 60%)`, background:`hsl(${m.hue} 45% 22%)`, color:'#fff', display:'flex', alignItems:'center', justifyContent:'center', fontFamily:T.display, fontSize:12 }}>{m.initials}</span>
+                  ))}
+                </div>
+                <p style={{ margin:0, fontFamily:T.body, fontSize:12.5, color:T.textDim, lineHeight:1.4 }}>
+                  Vous jouez tous les deux avec{' '}
+                  {mutuals.slice(0, 2).map((m, i) => (
+                    <span key={i}><b style={{ color:T.text }}>{m.name}</b>{i === 0 && mutuals.length > 1 ? ', ' : ''}</span>
+                  ))}
+                  {mutualCount > 2 && <> & {mutualCount - 2} autre{mutualCount - 2 > 1 ? 's' : ''}</>}
+                </p>
               </div>
             </section>
           )}
