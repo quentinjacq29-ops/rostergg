@@ -300,6 +300,16 @@ function ContextRail({ name, initials, hue, rankKey, division, lp, matchScore, m
   )
 }
 
+// ── EmptyList ─────────────────────────────────────────────────────────────
+function EmptyList({ label, sub }: { label: string; sub?: string }) {
+  return (
+    <div style={{ padding: '40px 4px', textAlign: 'center' }}>
+      <div style={{ fontFamily: T.mono, fontSize: 10, color: T.textMute, letterSpacing: '0.18em' }}>{label}</div>
+      {sub && <div style={{ fontFamily: T.mono, fontSize: 9, color: T.textMute, opacity: 0.6, marginTop: 6, letterSpacing: '0.1em' }}>{sub}</div>}
+    </div>
+  )
+}
+
 // ── Main InboxClient ───────────────────────────────────────────────────────
 
 export default function InboxClient({
@@ -325,6 +335,14 @@ export default function InboxClient({
   const [unreadCounts,  setUnreadCounts]  = useState<Record<string, number>>(
     Object.fromEntries(initialConversations.map(c => [c.conversationId, c.unreadCount]))
   )
+
+  // Onglets : Conversations / Demandes + sous-toggle Reçues / Envoyées
+  const [tab,    setTab]    = useState<'convos' | 'requests'>(
+    // aligne l'onglet par défaut sur la sélection initiale (deep-link conv → convos ; sinon demandes si présentes)
+    params.get('conv') ? 'convos' : (initialPending.length > 0 ? 'requests' : 'convos')
+  )
+  const [reqDir, setReqDir] = useState<'recues' | 'envoyees'>('recues')
+  const sentCount = 0 // demandes envoyées — branché à l'étape 4
 
   // Sélection
   const initialConvId = params.get('conv')
@@ -493,36 +511,56 @@ export default function InboxClient({
   const pendingCount = pending.length
   const convCount    = conversations.length
 
+  // Changement d'onglet → sélectionne le 1er élément de l'onglet (cohérence pane centrale)
+  function switchTab(t: 'convos' | 'requests') {
+    setTab(t)
+    if (t === 'convos' && conversations[0]) { setSelectedType('conversation'); setSelectedId(conversations[0].conversationId) }
+    else if (t === 'requests' && reqDir === 'recues' && pending[0]) { setSelectedType('request'); setSelectedId(pending[0].id) }
+  }
+
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
 
       {/* 3 panneaux */}
       <div style={{ flex: 1, minHeight: 0, display: 'flex', overflow: 'hidden' }}>
 
-        {/* ── Liste gauche ───────────────────────────────────────────── */}
+        {/* ── Liste gauche (onglets Conversations / Demandes) ────────── */}
         <div style={{ width: 348, flexShrink: 0, height: '100%', display: 'flex', flexDirection: 'column', borderRight: `1px solid ${T.line}`, background: 'rgba(255,255,255,0.012)' }}>
-          <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '4px 12px 16px' }}>
-            {pending.length > 0 && (
-              <>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 4px 10px' }}>
-                  <span style={{ fontFamily: T.mono, fontSize: 9.5, color: T.queue, letterSpacing: '0.18em', fontWeight: 700 }}>◢ DEMANDES REÇUES</span>
-                  <span style={{ minWidth: 18, height: 18, padding: '0 5px', borderRadius: 9, background: `${T.queue}22`, border: `1px solid ${T.queue}55`, color: T.queue, fontFamily: T.mono, fontSize: 10, fontWeight: 800, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>{pending.length}</span>
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  {pending.map(r => (
-                    <RequestRow key={r.id} r={r} onlineIds={onlineIds}
-                      selected={selectedType === 'request' && selectedId === r.id}
-                      onClick={() => { setSelectedType('request'); setSelectedId(r.id) }}
-                    />
-                  ))}
-                </div>
-              </>
-            )}
-            {conversations.length > 0 && (
-              <>
-                <div style={{ padding: `${pending.length > 0 ? 20 : 12}px 4px 10px` }}>
-                  <span style={{ fontFamily: T.mono, fontSize: 9.5, color: T.textMute, letterSpacing: '0.18em', fontWeight: 700 }}>CONVERSATIONS</span>
-                </div>
+
+          {/* Onglets */}
+          <div style={{ display: 'flex', gap: 4, padding: '6px 12px 0', borderBottom: `1px solid ${T.line}`, flexShrink: 0 }}>
+            {([['convos', 'Conversations', convCount], ['requests', 'Demandes', pendingCount]] as const).map(([key, label, count]) => {
+              const on = tab === key
+              return (
+                <button key={key} onClick={() => switchTab(key)} style={{ flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 7, padding: '11px 0 13px', background: 'transparent', border: 'none', borderBottom: `2px solid ${on ? T.cyan : 'transparent'}`, color: on ? T.cyan : T.textMute, fontFamily: T.mono, fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', cursor: 'pointer' }}>
+                  {label}
+                  {key === 'requests' && count > 0 && (
+                    <span style={{ minWidth: 17, height: 17, padding: '0 5px', borderRadius: 9, background: on ? T.cyan : T.queue, color: '#1a1400', fontFamily: T.mono, fontSize: 9, fontWeight: 800, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>{count}</span>
+                  )}
+                </button>
+              )
+            })}
+          </div>
+
+          {/* Sous-toggle Reçues / Envoyées */}
+          {tab === 'requests' && (
+            <div style={{ display: 'flex', gap: 6, padding: 4, margin: '12px 12px 2px', borderRadius: 12, background: 'rgba(255,255,255,0.04)', border: `1px solid ${T.line}`, flexShrink: 0 }}>
+              {([['recues', 'Reçues', pendingCount], ['envoyees', 'Envoyées', sentCount]] as const).map(([key, label, count]) => {
+                const on = reqDir === key
+                return (
+                  <button key={key} onClick={() => setReqDir(key)} style={{ flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 7, padding: 10, borderRadius: 9, border: 'none', background: on ? `linear-gradient(135deg, ${T.live}, ${T.cyan})` : 'transparent', color: on ? '#001018' : T.textDim, fontFamily: T.mono, fontSize: 11, letterSpacing: '0.06em', textTransform: 'uppercase', cursor: 'pointer' }}>
+                    {label}
+                    <span style={{ minWidth: 17, height: 17, padding: '0 5px', borderRadius: 9, background: on ? 'rgba(0,16,24,0.25)' : 'rgba(255,255,255,0.1)', color: on ? '#001018' : T.textDim, fontFamily: T.mono, fontSize: 9, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>{count}</span>
+                  </button>
+                )
+              })}
+            </div>
+          )}
+
+          {/* Contenu gardé par onglet */}
+          <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '10px 12px 16px' }}>
+            {tab === 'convos' ? (
+              conversations.length > 0 ? (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                   {conversations.map(conv => (
                     <ConvoRow key={conv.conversationId} conv={conv} onlineIds={onlineIds}
@@ -532,12 +570,20 @@ export default function InboxClient({
                     />
                   ))}
                 </div>
-              </>
-            )}
-            {pending.length === 0 && conversations.length === 0 && (
-              <div style={{ padding: '40px 4px', textAlign: 'center' }}>
-                <div style={{ fontFamily: T.mono, fontSize: 10, color: T.textMute, letterSpacing: '0.18em' }}>INBOX VIDE</div>
-              </div>
+              ) : <EmptyList label="AUCUNE CONVERSATION" />
+            ) : reqDir === 'recues' ? (
+              pending.length > 0 ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {pending.map(r => (
+                    <RequestRow key={r.id} r={r} onlineIds={onlineIds}
+                      selected={selectedType === 'request' && selectedId === r.id}
+                      onClick={() => { setSelectedType('request'); setSelectedId(r.id) }}
+                    />
+                  ))}
+                </div>
+              ) : <EmptyList label="AUCUNE DEMANDE REÇUE" />
+            ) : (
+              <EmptyList label="AUCUNE DEMANDE ENVOYÉE" sub="· BRANCHÉ À L'ÉTAPE 4 ·" />
             )}
           </div>
         </div>
