@@ -131,7 +131,7 @@ function RecentAccount({ account, onClick }: { account: RecentAccount; onClick: 
 
 // ── Carte connexion droite ────────────────────────────────────────────────────
 
-function ConnectCard({ account, onRiotLogin }: { account: RecentAccount | null; onRiotLogin: () => void }) {
+function ConnectCard({ account, onRiotLogin, busy }: { account: RecentAccount | null; onRiotLogin: () => void; busy: boolean }) {
   const hasAccount = account !== null
   return (
     <section className="auth-card-panel" style={{ position: 'relative', display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '40px 64px' }}>
@@ -172,8 +172,9 @@ function ConnectCard({ account, onRiotLogin }: { account: RecentAccount | null; 
 
         <button
           onClick={onRiotLogin}
+          disabled={busy}
           style={{
-            width: '100%', padding: '15px', borderRadius: 12, cursor: 'pointer',
+            width: '100%', padding: '15px', borderRadius: 12, cursor: busy ? 'wait' : 'pointer',
             border: hasAccount ? `1px solid ${T.lineStrong}` : 'none',
             background: hasAccount ? 'rgba(255,255,255,0.05)' : `linear-gradient(135deg, ${T.cyan}, ${T.violet})`,
             color: hasAccount ? T.text : '#001018',
@@ -181,13 +182,13 @@ function ConnectCard({ account, onRiotLogin }: { account: RecentAccount | null; 
             textTransform: 'uppercase', fontWeight: 700,
             display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 10,
             boxShadow: hasAccount ? 'none' : `0 16px 40px -14px ${T.cyan}`,
-            marginTop: hasAccount ? 0 : 26,
+            marginTop: hasAccount ? 0 : 26, opacity: busy ? 0.7 : 1,
           }}
         >
           <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={hasAccount ? T.cyan : '#001018'} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
             <path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6z" />
           </svg>
-          Continuer avec Riot
+          {busy ? 'Connexion…' : 'Continuer avec Riot'}
         </button>
 
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 18, marginTop: 18, flexWrap: 'wrap' }}>
@@ -227,6 +228,7 @@ function ConnectCard({ account, onRiotLogin }: { account: RecentAccount | null; 
 export default function LoginPage() {
   const [account, setAccount] = useState<RecentAccount | null>(null)
   const [hydrated, setHydrated] = useState(false)
+  const [busy, setBusy] = useState(false)
 
   useEffect(() => {
     try {
@@ -236,8 +238,29 @@ export default function LoginPage() {
     setHydrated(true)
   }, [])
 
-  function handleRiotLogin() {
-    window.location.href = `/${window.location.pathname.split('/')[1]}/onboarding/1`
+  async function handleRiotLogin() {
+    const locale = window.location.pathname.split('/')[1] || 'fr'
+    // DEV : RSO pas encore implémenté → on connecte réellement via UAT.
+    // En prod (Vercel), NEXT_PUBLIC_UAT_EMAIL est absent → on garde le stub onboarding.
+    const uatEmail = process.env.NEXT_PUBLIC_UAT_EMAIL
+    if (uatEmail) {
+      const riotId = account ? `${account.gameName}#${account.tagLine}` : (process.env.NEXT_PUBLIC_UAT_RIOT_ID ?? '')
+      if (riotId) {
+        setBusy(true)
+        try {
+          const res = await fetch('/api/auth/uat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: uatEmail, riotId, platform: 'euw1' }),
+          })
+          const data = await res.json()
+          if (res.ok && data.magicLink) { window.location.href = data.magicLink; return }
+          console.error('[login] UAT échec:', data?.error)
+        } catch (e) { console.error('[login] UAT erreur', e) }
+        setBusy(false)
+      }
+    }
+    window.location.href = `/${locale}/onboarding/1`
   }
 
   if (!hydrated) return <div style={{ width: '100%', minHeight: '100vh', background: T.bg }} />
@@ -248,7 +271,7 @@ export default function LoginPage() {
       backgroundImage: `radial-gradient(1000px 600px at 100% -5%, ${T.violet}12, transparent 55%), radial-gradient(900px 560px at 0% 105%, ${T.cyan}0e, transparent 55%)`,
     }}>
       <BrandPanel />
-      <ConnectCard account={account} onRiotLogin={handleRiotLogin} />
+      <ConnectCard account={account} onRiotLogin={handleRiotLogin} busy={busy} />
     </div>
   )
 }
