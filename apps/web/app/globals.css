@@ -290,6 +290,12 @@
   .rgg-me-grid        { grid-template-columns: 1fr; gap: 0; max-width: 430px; }
   .rgg-me-preview     { position: static; }
 }
+/* Heatmap éditable : colonnes (desktop) ⇆ matrice tap-to-paint (mobile) */
+.rgg-heat-mobile { display: none; }
+@media (max-width: 859px) {
+  .rgg-heat-desktop { display: none; }
+  .rgg-heat-mobile  { display: block; }
+}
 
 /* Profil joueur /u/:riotId : desktop ≥860px ⇆ mobile ≤859px */
 .rgg-pp-mobile { display: none; }

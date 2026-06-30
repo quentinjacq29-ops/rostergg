@@ -20,7 +20,8 @@ const LANG_LABEL: Record<string, string> = { fr: 'FR', en: 'EN', es: 'ES', de: '
 const LANG_FLAG:  Record<string, string> = { fr: '🇫🇷', en: '🇬🇧', es: '🇪🇸', de: '🇩🇪' }
 const LANG_COLOR: Record<string, string> = { fr: '#5b8def', en: '#e85a5a', es: '#ffb547', de: '#3ddc97' }
 const DAYS  = ['LUN', 'MAR', 'MER', 'JEU', 'VEN', 'SAM', 'DIM']
-const SLOTS = ['18h', '20h', '22h', '00h', '02h', '04h']
+// Libellés alignés sur les maquettes + le profil public /u (cohérence d'affichage)
+const SLOTS = ['12h', '15h', '18h', '20h', '22h', '00h']
 const BIO_MAX = 200
 const DEBOUNCE_MS = 600
 
@@ -233,6 +234,37 @@ function AvailHeatEdit({ grid, onChange }: {
         ))}
         <span style={{ fontFamily: T.mono, fontSize: 9, color: T.textMute }}>PLUS</span>
       </div>
+    </div>
+  )
+}
+
+// ── Heatmap éditable — matrice mobile (tap pour cycler l'intensité) ────────────
+
+function AvailHeatEditMatrix({ grid, onChange }: {
+  grid: number[][]
+  onChange: (weekday: number, slot: number, val: number) => void
+}) {
+  const DAYS_SHORT = ['L', 'M', 'M', 'J', 'V', 'S', 'D']
+  const heat = ['rgba(255,255,255,0.04)', `${T.cyan}38`, `${T.cyan}73`, `${T.cyan}c7`]
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: 'auto repeat(7,1fr)', gap: 4, userSelect: 'none', marginTop: 12 }}>
+      <div />
+      {DAYS_SHORT.map((d, i) => (
+        <div key={`h${i}`} style={{ fontFamily: T.mono, fontSize: 8, color: T.textMute, textAlign: 'center' }}>{d}</div>
+      ))}
+      {SLOTS.flatMap((sl, si) => [
+        <div key={`r${si}`} style={{ fontFamily: T.mono, fontSize: 8, color: T.textMute, display: 'flex', alignItems: 'center', paddingRight: 5 }}>{sl}</div>,
+        ...DAYS_SHORT.map((_, di) => {
+          const v = grid[di][si]
+          return (
+            <div
+              key={`${si}-${di}`}
+              onClick={() => onChange(di, si, (v + 1) % 4)}
+              style={{ aspectRatio: '1', borderRadius: 4, background: heat[v] ?? heat[0], cursor: 'pointer', transition: 'background .1s' }}
+            />
+          )
+        }),
+      ])}
     </div>
   )
 }
@@ -654,8 +686,9 @@ export default function MeClient(props: MeClientProps) {
 
             {/* Disponibilités */}
             <EditCard label="DISPONIBILITÉS" accent={T.cyan}>
-              <FieldLabel hint="CLIQUE + GLISSE POUR PEINDRE">CETTE SEMAINE · FUSEAU EUROPE/PARIS</FieldLabel>
-              <AvailHeatEdit grid={avGrid} onChange={updAvail} />
+              <FieldLabel hint="CLIQUE POUR PEINDRE">CETTE SEMAINE · FUSEAU EUROPE/PARIS</FieldLabel>
+              <div className="rgg-heat-desktop"><AvailHeatEdit grid={avGrid} onChange={updAvail} /></div>
+              <div className="rgg-heat-mobile"><AvailHeatEditMatrix grid={avGrid} onChange={updAvail} /></div>
             </EditCard>
 
             {/* Voir mon profil public */}
