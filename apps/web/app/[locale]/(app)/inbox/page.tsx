@@ -150,8 +150,15 @@ export default async function InboxPage() {
       unreadCount:    unreadCountMap[r.conversation_id] ?? 0,
       other,
       lastMessage: lastMsg ?? null,
-    }
+      // pour le tri par récence : dernier message sinon date d'acceptation
+      _sortAt: (lastMsg?.created_at ?? r.created_at) as string,
+    } as Conversation & { _sortAt: string }
   })
+
+  // Tri par récence (conversation la plus active en tête)
+  conversations.sort((a, b) =>
+    new Date((b as any)._sortAt).getTime() - new Date((a as any)._sortAt).getTime()
+  )
 
   return (
     <InboxClient
