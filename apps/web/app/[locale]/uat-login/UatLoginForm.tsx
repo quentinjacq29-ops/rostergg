@@ -16,6 +16,8 @@ const T = {
 type TestUser = {
   initials: string
   name: string
+  riotId: string
+  email: string
   role: string
   tag: string
   tagColor: string
@@ -23,21 +25,23 @@ type TestUser = {
   destination: string
 }
 
+// Vrais comptes seedés (email @test.rostergg + Riot ID résolu via Riot).
 const TEST_USERS: TestUser[] = [
   {
-    initials: 'VY', name: 'Vyx', role: 'MID · Diamond II · onboarded',
-    tag: 'CAPTAIN', tagColor: T.cyan, tagBg: `${T.cyan}1f`,
-    destination: 'duo',
+    initials: 'DU', name: 'Durix', riotId: 'Durix#EUW', email: 'quentin.jacq29@gmail.com',
+    role: 'MID · ton compte', tag: 'MOI', tagColor: T.cyan, tagBg: `${T.cyan}1f`, destination: 'duo',
   },
   {
-    initials: 'NW', name: 'Newbie', role: 'no profile · pre-onboarding',
-    tag: 'NEW', tagColor: T.live, tagBg: `${T.live}1f`,
-    destination: 'onboarding/1',
+    initials: 'KZ', name: 'KAYNZ', riotId: 'KAYNZ#EUW', email: 'kaynz@test.rostergg',
+    role: 'JNG · Diamond II', tag: 'TEST', tagColor: T.live, tagBg: `${T.live}1f`, destination: 'duo',
   },
   {
-    initials: 'KZ', name: 'Kayzo', role: 'SUP · Master · coach',
-    tag: 'COACH', tagColor: T.danger, tagBg: `${T.danger}1f`,
-    destination: 'duo',
+    initials: 'GR', name: 'GRASPR', riotId: 'GRASPR#EUW', email: 'graspr@test.rostergg',
+    role: 'TOP · pool Aatrox/Jax', tag: 'TEST', tagColor: T.violet, tagBg: `${T.violet}1f`, destination: 'duo',
+  },
+  {
+    initials: 'NO', name: 'NOCTURNO', riotId: 'NOCTURNO#EUW', email: 'nocturno@test.rostergg',
+    role: 'JNG · Hecarim/Rammus', tag: 'TEST', tagColor: T.queue, tagBg: `${T.queue}1f`, destination: 'duo',
   },
 ]
 
@@ -50,13 +54,13 @@ export default function UatLoginForm() {
   const [magicLink, setMagicLink] = useState<string | null>(null)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
 
-  async function loginAsUser(email: string, destination: string) {
+  async function loginAsUser(email: string, riotId: string, destination: string) {
     setState('loading')
     setErrorMsg(null)
     const res = await fetch('/api/auth/uat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email }),
+      body: JSON.stringify({ email, riotId, platform: 'euw1' }),
     })
     const data = await res.json()
     if (!res.ok) {
@@ -75,10 +79,13 @@ export default function UatLoginForm() {
     e.preventDefault()
     setState('loading')
     setErrorMsg(null)
+    // Saisie = Riot ID (GameName#Tag). Email dérivé du compte de test.
+    const riotId = impersonate.trim().includes('#') ? impersonate.trim() : `${impersonate.trim()}#EUW`
+    const email = `${riotId.split('#')[0].toLowerCase()}@test.rostergg`
     const res = await fetch('/api/auth/uat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: impersonate }),
+      body: JSON.stringify({ email, riotId, platform: 'euw1' }),
     })
     const data = await res.json()
     if (!res.ok) {
@@ -158,7 +165,7 @@ export default function UatLoginForm() {
             {TEST_USERS.map(u => (
               <button
                 key={u.name}
-                onClick={() => loginAsUser(`${u.name.toLowerCase()}@test.rostergg`, u.destination)}
+                onClick={() => loginAsUser(u.email, u.riotId, u.destination)}
                 disabled={state === 'loading'}
                 style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 13px', borderRadius: 12, background: 'rgba(255,255,255,0.03)', border: `1px solid ${T.line}`, cursor: 'pointer', textAlign: 'left', color: T.text, transition: 'border-color .15s' }}
                 onMouseEnter={e => (e.currentTarget.style.borderColor = T.lineStrong)}
@@ -186,13 +193,13 @@ export default function UatLoginForm() {
           </div>
 
           {/* Impersonate */}
-          <div style={{ fontFamily: T.mono, fontSize: 9.5, color: T.textMute, letterSpacing: '0.2em', marginBottom: 10 }}>IMPERSONATE PAR USER ID / EMAIL</div>
+          <div style={{ fontFamily: T.mono, fontSize: 9.5, color: T.textMute, letterSpacing: '0.2em', marginBottom: 10 }}>AUTRE COMPTE DE TEST · PAR RIOT ID</div>
           <form onSubmit={handleImpersonate} style={{ display: 'flex', gap: 8 }}>
             <input
               type="text"
               value={impersonate}
               onChange={e => setImpersonate(e.target.value)}
-              placeholder="user_id ou email@test.dev"
+              placeholder="GameName#Tag (ex : GRASPR#EUW)"
               required
               style={{ flex: 1, padding: '14px 16px', borderRadius: 12, background: 'rgba(255,255,255,0.04)', border: `1px solid ${T.lineStrong}`, color: T.text, fontFamily: T.body, fontSize: 14, outline: 'none' }}
             />
