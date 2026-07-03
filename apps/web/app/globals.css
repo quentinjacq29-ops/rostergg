@@ -297,6 +297,17 @@
   .rgg-heat-mobile  { display: block; }
 }
 
+/* Inbox /inbox : desktop 3-panneaux ⇆ mobile empilé (liste ↔ détail plein écran) */
+.rgg-inbox-detail { flex: 1; min-width: 0; height: 100%; display: flex; }
+.rgg-inbox-back   { display: none; }
+@media (max-width: 859px) {
+  .rgg-inbox-list { width: 100% !important; border-right: none !important; }
+  .rgg-inbox-rail { display: none !important; }
+  .rgg-inbox-back { display: inline-flex !important; }
+  .rgg-inbox-view-list   .rgg-inbox-detail { display: none !important; }
+  .rgg-inbox-view-detail .rgg-inbox-list   { display: none !important; }
+}
+
 /* Profil joueur /u/:riotId : desktop ≥860px ⇆ mobile ≤859px */
 .rgg-pp-mobile { display: none; }
 @media (max-width: 859px) {

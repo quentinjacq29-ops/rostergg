@@ -243,7 +243,8 @@ function Bubble({ m, isMe, otherInitials, otherHue, otherRankKey }: {
 }
 
 // ── ContextRail ───────────────────────────────────────────────────────────
-function ContextRail({ name, initials, hue, rankKey, division, lp, matchScore, mainRole, rightRole, champPool, online, pendingLabel }: {
+function ContextRail({ className, name, initials, hue, rankKey, division, lp, matchScore, mainRole, rightRole, champPool, online, pendingLabel }: {
+  className?: string
   name: string; initials: string; hue: number; rankKey: string | null; division: string | null; lp: number | null
   matchScore: number | null
   mainRole: string | null
@@ -254,7 +255,7 @@ function ContextRail({ name, initials, hue, rankKey, division, lp, matchScore, m
   const rrc = ROLE_META[(rightRole ?? 'FILL').toUpperCase()]?.c ?? T.textDim
   const firstPool = mainRole ? (champPool[mainRole.toUpperCase()] ?? Object.values(champPool)[0] ?? []) : Object.values(champPool)[0] ?? []
   return (
-    <div style={{ width: 296, flexShrink: 0, height: '100%', overflowY: 'auto', padding: '22px 20px', borderLeft: `1px solid ${T.line}`, background: 'rgba(255,255,255,0.012)' }}>
+    <div className={className} style={{ width: 296, flexShrink: 0, height: '100%', overflowY: 'auto', padding: '22px 20px', borderLeft: `1px solid ${T.line}`, background: 'rgba(255,255,255,0.012)' }}>
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', paddingBottom: 18, borderBottom: `1px solid ${T.line}` }}>
         <Avatar initials={initials} size={72} rank={rankKey ?? 'iron'} hue={hue} online={online} />
         <div style={{ fontFamily: T.display, fontSize: 22, color: T.text, letterSpacing: '0.03em', marginTop: 12 }}>{name}</div>
@@ -371,6 +372,9 @@ export default function InboxClient({
   )
   const [reqDir, setReqDir] = useState<'recues' | 'envoyees'>('recues')
   const sentCount = 0 // demandes envoyées — branché à l'étape 4
+  // Mobile : liste plein écran ↔ détail plein écran (le desktop montre les 3 panneaux)
+  const [mobileView, setMobileView] = useState<'list' | 'detail'>('list')
+  const openDetail = () => setMobileView('detail')
 
   // Sélection
   const initialConvId = params.get('conv')
@@ -549,11 +553,11 @@ export default function InboxClient({
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
 
-      {/* 3 panneaux */}
-      <div style={{ flex: 1, minHeight: 0, display: 'flex', overflow: 'hidden' }}>
+      {/* 3 panneaux desktop ⇆ liste/détail empilés mobile */}
+      <div className={`rgg-inbox-3pane rgg-inbox-view-${mobileView}`} style={{ flex: 1, minHeight: 0, display: 'flex', overflow: 'hidden' }}>
 
         {/* ── Liste gauche (onglets Conversations / Demandes) ────────── */}
-        <div style={{ width: 348, flexShrink: 0, height: '100%', display: 'flex', flexDirection: 'column', borderRight: `1px solid ${T.line}`, background: 'rgba(255,255,255,0.012)' }}>
+        <div className="rgg-inbox-list" style={{ width: 348, flexShrink: 0, height: '100%', display: 'flex', flexDirection: 'column', borderRight: `1px solid ${T.line}`, background: 'rgba(255,255,255,0.012)' }}>
 
           {/* Onglets (DSegmented) */}
           <div style={{ flexShrink: 0, padding: '16px 16px 10px' }}>
@@ -573,7 +577,7 @@ export default function InboxClient({
                     <ConvoRow key={conv.conversationId} conv={conv} onlineIds={onlineIds}
                       unread={unreadCounts[conv.conversationId] ?? 0}
                       selected={selectedType === 'conversation' && selectedId === conv.conversationId}
-                      onClick={() => { setSelectedType('conversation'); setSelectedId(conv.conversationId) }}
+                      onClick={() => { setSelectedType('conversation'); setSelectedId(conv.conversationId); openDetail() }}
                     />
                   ))}
                 </div>
@@ -596,7 +600,7 @@ export default function InboxClient({
                       {pending.map(r => (
                         <RequestRow key={r.id} r={r} onlineIds={onlineIds}
                           selected={selectedType === 'request' && selectedId === r.id}
-                          onClick={() => { setSelectedType('request'); setSelectedId(r.id) }}
+                          onClick={() => { setSelectedType('request'); setSelectedId(r.id); openDetail() }}
                         />
                       ))}
                     </div>
@@ -613,68 +617,81 @@ export default function InboxClient({
           </div>
         </div>
 
-        {/* ── Pane centrale ──────────────────────────────────────────── */}
-        {selectedType === 'request' && selectedRequest ? (
-          <RequestDetailPane
-            r={selectedRequest} onlineIds={onlineIds} respondingId={respondingId}
-            onAccept={() => handleRespond(selectedRequest.id, 'accept')}
-            onDecline={() => handleRespond(selectedRequest.id, 'decline')}
-          />
-        ) : selectedType === 'conversation' && selectedConv ? (
-          <ChatPane
-            conv={selectedConv} userId={userId} messages={messages} onlineIds={onlineIds}
-            msgInput={msgInput} sending={sending} peerTyping={peerTyping}
-            messagesEndRef={messagesEndRef}
-            onInputChange={v => { setMsgInput(v); if (v) broadcastTyping() }}
-            onSend={handleSendMessage}
-            onInviteToLobby={handleInviteToLobby}
-          />
-        ) : (
-          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <span style={{ fontFamily: T.mono, fontSize: 10, color: T.textMute, letterSpacing: '0.16em' }}>SÉLECTIONNE UNE CONVERSATION</span>
-          </div>
-        )}
+        {/* ── Détail (fil / demande + rail) — plein écran en mobile ──── */}
+        <div className="rgg-inbox-detail">
+          {selectedType === 'request' && selectedRequest ? (
+            <RequestDetailPane
+              r={selectedRequest} onlineIds={onlineIds} respondingId={respondingId}
+              onAccept={() => handleRespond(selectedRequest.id, 'accept')}
+              onDecline={() => handleRespond(selectedRequest.id, 'decline')}
+              onBack={() => setMobileView('list')}
+            />
+          ) : selectedType === 'conversation' && selectedConv ? (
+            <ChatPane
+              conv={selectedConv} userId={userId} messages={messages} onlineIds={onlineIds}
+              msgInput={msgInput} sending={sending} peerTyping={peerTyping}
+              messagesEndRef={messagesEndRef}
+              onInputChange={v => { setMsgInput(v); if (v) broadcastTyping() }}
+              onSend={handleSendMessage}
+              onInviteToLobby={handleInviteToLobby}
+              onBack={() => setMobileView('list')}
+            />
+          ) : (
+            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <span style={{ fontFamily: T.mono, fontSize: 10, color: T.textMute, letterSpacing: '0.16em' }}>SÉLECTIONNE UNE CONVERSATION</span>
+            </div>
+          )}
 
-        {/* ── Rail contexte ──────────────────────────────────────────── */}
-        {selectedType === 'request' && selectedRequest ? (
-          <ContextRail
-            name={selectedRequest.sender.gameName ?? selectedRequest.sender.displayName ?? '—'}
-            initials={(selectedRequest.sender.gameName ?? selectedRequest.sender.displayName ?? '—').slice(0,2).toUpperCase()}
-            hue={nameHue(selectedRequest.sender.gameName ?? selectedRequest.sender.displayName ?? '—')}
-            rankKey={selectedRequest.sender.rankKey}
-            division={selectedRequest.sender.division}
-            lp={selectedRequest.sender.lp}
-            matchScore={selectedRequest.matchScore}
-            mainRole={selectedRequest.sender.mainRole}
-            rightRole={selectedRequest.sender.lookingFor}
-            champPool={selectedRequest.sender.champPool}
-            online={onlineIds.has(selectedRequest.sender.id)}
-            pendingLabel="RIOT ID MASQUÉ · DEMANDE EN ATTENTE"
-          />
-        ) : selectedType === 'conversation' && selectedConv ? (
-          <ContextRail
-            name={selectedConv.other.gameName ?? selectedConv.other.displayName ?? '—'}
-            initials={(selectedConv.other.gameName ?? selectedConv.other.displayName ?? '—').slice(0,2).toUpperCase()}
-            hue={nameHue(selectedConv.other.gameName ?? selectedConv.other.displayName ?? '—')}
-            rankKey={selectedConv.other.rankKey}
-            division={selectedConv.other.division}
-            lp={selectedConv.other.lp}
-            matchScore={selectedConv.matchScore}
-            mainRole={selectedConv.other.mainRole}
-            rightRole={currentUserRole}
-            champPool={selectedConv.other.champPool}
-            online={onlineIds.has(selectedConv.other.id)}
-          />
-        ) : null}
+          {selectedType === 'request' && selectedRequest ? (
+            <ContextRail
+              className="rgg-inbox-rail"
+              name={selectedRequest.sender.gameName ?? selectedRequest.sender.displayName ?? '—'}
+              initials={(selectedRequest.sender.gameName ?? selectedRequest.sender.displayName ?? '—').slice(0,2).toUpperCase()}
+              hue={nameHue(selectedRequest.sender.gameName ?? selectedRequest.sender.displayName ?? '—')}
+              rankKey={selectedRequest.sender.rankKey}
+              division={selectedRequest.sender.division}
+              lp={selectedRequest.sender.lp}
+              matchScore={selectedRequest.matchScore}
+              mainRole={selectedRequest.sender.mainRole}
+              rightRole={selectedRequest.sender.lookingFor}
+              champPool={selectedRequest.sender.champPool}
+              online={onlineIds.has(selectedRequest.sender.id)}
+              pendingLabel="RIOT ID MASQUÉ · DEMANDE EN ATTENTE"
+            />
+          ) : selectedType === 'conversation' && selectedConv ? (
+            <ContextRail
+              className="rgg-inbox-rail"
+              name={selectedConv.other.gameName ?? selectedConv.other.displayName ?? '—'}
+              initials={(selectedConv.other.gameName ?? selectedConv.other.displayName ?? '—').slice(0,2).toUpperCase()}
+              hue={nameHue(selectedConv.other.gameName ?? selectedConv.other.displayName ?? '—')}
+              rankKey={selectedConv.other.rankKey}
+              division={selectedConv.other.division}
+              lp={selectedConv.other.lp}
+              matchScore={selectedConv.matchScore}
+              mainRole={selectedConv.other.mainRole}
+              rightRole={currentUserRole}
+              champPool={selectedConv.other.champPool}
+              online={onlineIds.has(selectedConv.other.id)}
+            />
+          ) : null}
+        </div>
       </div>
     </div>
   )
 }
 
 // ── RequestDetailPane ─────────────────────────────────────────────────────
-function RequestDetailPane({ r, onlineIds, respondingId, onAccept, onDecline }: {
+function BackBtn({ onClick }: { onClick: () => void }) {
+  return (
+    <button className="rgg-inbox-back" onClick={onClick} style={{ width: 34, height: 34, borderRadius: 9, background: 'rgba(255,255,255,0.05)', border: `1px solid ${T.lineStrong}`, color: T.textDim, alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 }}>
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6" /></svg>
+    </button>
+  )
+}
+
+function RequestDetailPane({ r, onlineIds, respondingId, onAccept, onDecline, onBack }: {
   r: PendingRequest; onlineIds: Set<string>; respondingId: string | null
-  onAccept: () => void; onDecline: () => void
+  onAccept: () => void; onDecline: () => void; onBack: () => void
 }) {
   const name    = r.sender.gameName ?? r.sender.displayName ?? '—'
   const init    = name.slice(0, 2).toUpperCase()
@@ -692,6 +709,7 @@ function RequestDetailPane({ r, onlineIds, respondingId, onAccept, onDecline }: 
   return (
     <div style={{ flex: 1, minWidth: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
       <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 14, padding: '16px 24px', borderBottom: `1px solid ${T.line}`, background: 'rgba(10,12,20,0.5)' }}>
+        <BackBtn onClick={onBack} />
         <Avatar initials={init} size={44} rank={rk} hue={hue} online={online} />
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
@@ -776,13 +794,14 @@ function RequestDetailPane({ r, onlineIds, respondingId, onAccept, onDecline }: 
 }
 
 // ── ChatPane ──────────────────────────────────────────────────────────────
-function ChatPane({ conv, userId, messages, onlineIds, msgInput, sending, peerTyping, messagesEndRef, onInputChange, onSend, onInviteToLobby }: {
+function ChatPane({ conv, userId, messages, onlineIds, msgInput, sending, peerTyping, messagesEndRef, onInputChange, onSend, onInviteToLobby, onBack }: {
   conv: Conversation; userId: string; messages: Message[]; onlineIds: Set<string>
   msgInput: string; sending: boolean; peerTyping: boolean
   messagesEndRef: React.RefObject<HTMLDivElement>
   onInputChange: (v: string) => void
   onSend: () => void
   onInviteToLobby: () => void
+  onBack: () => void
 }) {
   const name    = conv.other.gameName ?? conv.other.displayName ?? '—'
   const init    = name.slice(0, 2).toUpperCase()
@@ -801,6 +820,7 @@ function ChatPane({ conv, userId, messages, onlineIds, msgInput, sending, peerTy
     <div style={{ flex: 1, minWidth: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
       {/* Thread header */}
       <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 14, padding: '16px 24px', borderBottom: `1px solid ${T.line}`, background: 'rgba(10,12,20,0.5)' }}>
+        <BackBtn onClick={onBack} />
         <Avatar initials={init} size={44} rank={rk} hue={hue} online={online} />
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
