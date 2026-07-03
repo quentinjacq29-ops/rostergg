@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
+import { Link } from '@/i18n/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { usePresence } from '@/lib/hooks/usePresence'
 import Avatar, { RANK_COLORS } from '@/components/ui/Avatar'
@@ -451,6 +452,7 @@ export default function InboxClient({
         if (upd.status === 'accepted' && upd.conversation_id) {
           setPending(prev => prev.filter(r => r.id !== upd.id))
           router.refresh()
+          setTab('convos')
           setSelectedType('conversation')
           setSelectedId(upd.conversation_id)
         }
@@ -498,6 +500,7 @@ export default function InboxClient({
       if (action === 'accept') {
         const data = await res.json()
         router.refresh()
+        setTab('convos') // la conversation créée vit dans l'onglet Conversations
         setSelectedType('conversation')
         setSelectedId(data.conversation_id)
       } else {
@@ -768,6 +771,13 @@ function RequestDetailPane({ r, onlineIds, respondingId, onAccept, onDecline, on
               En acceptant, le chat s&apos;ouvre et vos <b style={{ color: T.text }}>Riot ID</b> sont révélés des deux côtés.
             </span>
           </div>
+          {r.sender.gameName && r.sender.tagLine && (
+            <Link href={`/u/${encodeURIComponent(r.sender.gameName)}/${encodeURIComponent(r.sender.tagLine)}`}
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 12, padding: '12px', borderRadius: 12, background: 'rgba(255,255,255,0.03)', border: `1px solid ${T.lineStrong}`, color: T.textDim, fontFamily: T.mono, fontSize: 11, letterSpacing: '0.06em', textTransform: 'uppercase', textDecoration: 'none' }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z" /><circle cx="12" cy="12" r="3" /></svg>
+              Voir le profil de {name}
+            </Link>
+          )}
           <div style={{ display: 'flex', gap: 12, marginTop: 18 }}>
             <button onClick={onDecline} disabled={loading} style={{ flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '14px', borderRadius: 12, background: 'rgba(255,255,255,0.05)', border: `1px solid ${T.lineStrong}`, color: T.textDim, cursor: loading ? 'not-allowed' : 'pointer', fontFamily: T.display, fontSize: 13, letterSpacing: '0.08em', textTransform: 'uppercase' as const, opacity: loading ? 0.5 : 1 }}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={T.textDim} strokeWidth="2.6" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12" /></svg>Refuser
