@@ -74,6 +74,25 @@ type Message = {
 function nameHue(s: string) {
   let h = 0; for (const c of s) h = (h * 31 + c.charCodeAt(0)) % 360; return h
 }
+
+// Construit une PendingRequest depuis la ligne jointe (même forme que la page serveur)
+function buildRequest(d: any): PendingRequest { // eslint-disable-line @typescript-eslint/no-explicit-any
+  const p = d.sender
+  const ra = p?.riot_accounts
+  const mp = p?.matching_prefs
+  const solo = (ra?.ranks ?? []).find((r: any) => r.queue === 'RANKED_SOLO_5x5') ?? null // eslint-disable-line @typescript-eslint/no-explicit-any
+  return {
+    id: d.id, matchScore: d.match_score, message: d.message, createdAt: d.created_at,
+    sender: {
+      id: p?.id ?? '', displayName: p?.display_name ?? null,
+      gameName: ra?.game_name ?? null, tagLine: ra?.tag_line ?? null,
+      mainRole: mp?.main_roles?.[0] ?? null, lookingFor: mp?.looking_for_roles?.[0] ?? null,
+      rankKey: solo?.tier?.toLowerCase() ?? null, division: solo?.division ?? null,
+      lp: solo?.league_points ?? null, wins: solo?.wins ?? null, losses: solo?.losses ?? null,
+      champPool: (mp?.champion_pool as Record<string, string[]>) ?? {},
+    },
+  }
+}
 function rankLabel(rankKey: string | null, division: string | null) {
   if (!rankKey) return 'UNRANKED'
   const high = ['master','grandmaster','challenger'].includes(rankKey.toLowerCase())
@@ -413,6 +432,17 @@ export default function InboxClient({
   const [mobileView, setMobileView] = useState<'list' | 'detail'>('list')
   const openDetail = () => setMobileView('detail')
 
+  // Re-synchronise l'état quand le serveur renvoie des données fraîches
+  // (router.refresh / navigation) — sinon useState garde la 1ère valeur (périmée).
+  useEffect(() => { setPending(initialPending) }, [initialPending])
+  useEffect(() => { setSent(initialSent) }, [initialSent])
+  useEffect(() => {
+    setConversations(initialConversations)
+    setUnreadCounts(Object.fromEntries(initialConversations.map(c => [c.conversationId, c.unreadCount])))
+  }, [initialConversations])
+  // Données fraîches à chaque arrivée sur l'inbox (contourne le Router Cache Next)
+  useEffect(() => { router.refresh() }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
   // Sélection
   const initialConvId = params.get('conv')
   const [selectedType, setSelectedType] = useState<'request' | 'sentRequest' | 'conversation' | null>(
@@ -512,6 +542,31 @@ export default function InboxClient({
           setSelectedType('conversation')
           setSelectedId(cId)
         }
+      })
+      // Demande REÇUE en direct → l'ajouter à la liste Reçues
+      .on('postgres_changes', {
+        event: 'INSERT', schema: 'public', table: 'duo_requests',
+        filter: `to_profile=eq.${userId}`,
+      }, async payload => {
+        const row = payload.new as { id: string; status: string }
+        if (row.status !== 'pending') return
+        const { data } = await supabase
+          .from('duo_requests')
+          .select('id, match_score, message, created_at, sender:profiles!from_profile(id, display_name, riot_accounts(game_name, tag_line, ranks(tier, division, league_points, wins, losses, queue)), matching_prefs(main_roles, looking_for_roles, champion_pool))')
+          .eq('id', row.id)
+          .maybeSingle()
+        if (!data) return
+        const req = buildRequest(data)
+        setPending(prev => prev.some(r => r.id === req.id) ? prev : [req, ...prev])
+      })
+      // Demande annulée/refusée par l'autre → retirer de nos listes
+      .on('postgres_changes', {
+        event: 'DELETE', schema: 'public', table: 'duo_requests',
+      }, payload => {
+        const del = payload.old as { id?: string }
+        if (!del?.id) return
+        setPending(prev => prev.filter(r => r.id !== del.id))
+        setSent(prev => prev.filter(r => r.id !== del.id))
       })
       .subscribe()
     return () => { supabase.removeChannel(ch) }
