@@ -240,26 +240,13 @@ export default function LoginPage() {
 
   async function handleRiotLogin() {
     const locale = window.location.pathname.split('/')[1] || 'fr'
-    // DEV : RSO pas encore implémenté → on connecte réellement via UAT.
-    // En prod (Vercel), NEXT_PUBLIC_UAT_EMAIL est absent → on garde le stub onboarding.
-    const uatEmail = process.env.NEXT_PUBLIC_UAT_EMAIL
-    if (uatEmail) {
-      const riotId = account ? `${account.gameName}#${account.tagLine}` : (process.env.NEXT_PUBLIC_UAT_RIOT_ID ?? '')
-      if (riotId) {
-        setBusy(true)
-        try {
-          const res = await fetch('/api/auth/uat', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email: uatEmail, riotId, platform: 'euw1' }),
-          })
-          const data = await res.json()
-          if (res.ok && data.magicLink) { window.location.href = data.magicLink; return }
-          console.error('[login] UAT échec:', data?.error)
-        } catch (e) { console.error('[login] UAT erreur', e) }
-        setBusy(false)
-      }
+    // DEV : RSO pas encore implémenté → page de choix de compte (UAT),
+    // pour pouvoir choisir le compte (au lieu d'auto-connecter un compte fixe).
+    if (process.env.NEXT_PUBLIC_UAT_EMAIL) {
+      window.location.href = `/${locale}/uat-login`
+      return
     }
+    // Prod (Vercel) : stub onboarding tant que le RSO n'est pas branché.
     window.location.href = `/${locale}/onboarding/1`
   }
 

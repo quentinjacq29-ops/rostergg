@@ -30,7 +30,7 @@ function LogoMark({ size = 54 }: { size?: number }) {
 function LoadingRing() {
   return (
     <div style={{ width: 96, height: 96, position: 'relative', borderRadius: '50%', margin: '0 auto 28px' }}>
-      <style>{`
+      <style dangerouslySetInnerHTML={{ __html: `
         @keyframes cb-spin { to { transform: rotate(360deg); } }
         .cb-ring::before {
           content: '';
@@ -48,7 +48,7 @@ function LoadingRing() {
           background: ${T.surface};
         }
         @media (prefers-reduced-motion: reduce) { .cb-ring::before { animation: none; } }
-      `}</style>
+      ` }} />
       <div className="cb-ring" style={{ position: 'absolute', inset: 0, borderRadius: '50%' }} />
       <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1 }}>
         <LogoMark size={54} />
