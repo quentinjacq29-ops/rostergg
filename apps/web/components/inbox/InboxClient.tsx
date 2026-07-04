@@ -129,8 +129,9 @@ function ReqStat({ label, value }: { label: string; value: string | number }) {
 }
 
 // ── RequestRow ────────────────────────────────────────────────────────────
-function RequestRow({ r, selected, onlineIds, onClick }: {
+function RequestRow({ r, selected, onlineIds, onClick, onAccept, onDecline, loading }: {
   r: PendingRequest; selected: boolean; onlineIds: Set<string>; onClick: () => void
+  onAccept: () => void; onDecline: () => void; loading: boolean
 }) {
   const rc   = ROLE_META[(r.sender.mainRole ?? 'FILL').toUpperCase()]?.c ?? T.textDim
   const name = r.sender.gameName ?? r.sender.displayName ?? '—'
@@ -158,10 +159,10 @@ function RequestRow({ r, selected, onlineIds, onClick }: {
             <span style={{ width: 5, height: 5, borderRadius: '50%', background: T.cyan }} />{r.matchScore ?? '—'}% MATCH
           </span>
           <div style={{ flex: 1 }} />
-          <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 30, height: 30, borderRadius: 8, background: 'rgba(255,255,255,0.05)', border: `1px solid ${T.lineStrong}` }}>
+          <span role="button" title="Refuser" onClick={e => { e.stopPropagation(); if (!loading) onDecline() }} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 30, height: 30, borderRadius: 8, background: 'rgba(255,255,255,0.05)', border: `1px solid ${T.lineStrong}`, cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.5 : 1 }}>
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={T.textDim} strokeWidth="2.6" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12" /></svg>
           </span>
-          <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 30, height: 30, borderRadius: 8, background: `${T.live}1c`, border: `1px solid ${T.live}55` }}>
+          <span role="button" title="Accepter" onClick={e => { e.stopPropagation(); if (!loading) onAccept() }} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 30, height: 30, borderRadius: 8, background: `${T.live}1c`, border: `1px solid ${T.live}55`, cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.5 : 1 }}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={T.live} strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5" /></svg>
           </span>
         </div>
@@ -362,16 +363,6 @@ function Segmented({ items, active, onSelect }: {
   )
 }
 
-// ── SectionLabel ────────────────────────────────────────────────────────────
-function SectionLabel({ label, count, accent }: { label: string; count: number; accent: string }) {
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 4px 10px' }}>
-      <span style={{ fontFamily: T.mono, fontSize: 9.5, color: accent, letterSpacing: '0.18em', fontWeight: 700 }}>◢ {label}</span>
-      <span style={{ minWidth: 18, height: 18, padding: '0 5px', borderRadius: 9, background: accent === T.queue ? `${T.queue}22` : 'rgba(255,255,255,0.06)', border: `1px solid ${accent === T.queue ? T.queue + '55' : T.lineStrong}`, color: accent === T.queue ? T.queue : T.textDim, fontFamily: T.mono, fontSize: 10, fontWeight: 800, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>{count}</span>
-    </div>
-  )
-}
-
 // ── EmptyList ─────────────────────────────────────────────────────────────
 function EmptyList({ label, sub }: { label: string; sub?: string }) {
   return (
@@ -534,6 +525,7 @@ export default function InboxClient({
 
   // ── Actions ───────────────────────────────────────────────────────────
   async function handleRespond(requestId: string, action: 'accept' | 'decline') {
+    const req = pending.find(x => x.id === requestId)
     setRespondingId(requestId)
     const res = await fetch('/api/duo/respond', {
       method: 'PATCH',
@@ -545,8 +537,25 @@ export default function InboxClient({
       setPending(prev => prev.filter(r => r.id !== requestId))
       if (action === 'accept') {
         const data = await res.json()
+        // Ajout optimiste : la conversation apparaît tout de suite (pas d'attente du refresh serveur)
+        if (req && data.conversation_id) {
+          const newConv: Conversation = {
+            requestId: req.id,
+            conversationId: data.conversation_id,
+            matchScore: req.matchScore,
+            unreadCount: 0,
+            other: {
+              id: req.sender.id, displayName: req.sender.displayName, gameName: req.sender.gameName,
+              tagLine: req.sender.tagLine, mainRole: req.sender.mainRole, rankKey: req.sender.rankKey,
+              division: req.sender.division, lp: req.sender.lp, champPool: req.sender.champPool,
+            },
+            lastMessage: req.message ? { body: req.message, sender_id: req.sender.id, created_at: req.createdAt } : null,
+          }
+          setConversations(prev => prev.some(c => c.conversationId === newConv.conversationId) ? prev : [newConv, ...prev])
+        }
         router.refresh()
         setTab('convos') // la conversation créée vit dans l'onglet Conversations
+        setReqDir('recues')
         setSelectedType('conversation')
         setSelectedId(data.conversation_id)
       } else {
@@ -649,7 +658,7 @@ export default function InboxClient({
                 {/* Sous-toggle Reçues / Envoyées (DSegmented) */}
                 <div style={{ padding: '8px 2px 12px' }}>
                   <Segmented
-                    items={[{ id: 'recues', label: 'REÇUES' }, { id: 'envoyees', label: 'ENVOYÉES' }]}
+                    items={[{ id: 'recues', label: 'REÇUES', badge: pendingCount }, { id: 'envoyees', label: 'ENVOYÉES', badge: sentCount }]}
                     active={reqDir}
                     onSelect={id => {
                       setReqDir(id as 'recues' | 'envoyees')
@@ -659,24 +668,22 @@ export default function InboxClient({
                   />
                 </div>
 
-                {/* Section Demandes reçues */}
-                <SectionLabel label="DEMANDES REÇUES" count={pendingCount} accent={T.queue} />
-                {pending.length > 0
-                  ? <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                      {pending.map(r => (
-                        <RequestRow key={r.id} r={r} onlineIds={onlineIds}
-                          selected={selectedType === 'request' && selectedId === r.id}
-                          onClick={() => { setSelectedType('request'); setSelectedId(r.id); openDetail() }}
-                        />
-                      ))}
-                    </div>
-                  : <EmptyList label="AUCUNE DEMANDE REÇUE" />
-                }
-
-                {/* Section Demandes envoyées */}
-                <div style={{ paddingTop: 14 }}>
-                  <SectionLabel label="DEMANDES ENVOYÉES" count={sentCount} accent={T.textDim} />
-                  {sent.length > 0
+                {/* Deux listes distinctes, gardées par le sous-toggle */}
+                {reqDir === 'recues' ? (
+                  pending.length > 0
+                    ? <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                        {pending.map(r => (
+                          <RequestRow key={r.id} r={r} onlineIds={onlineIds} loading={respondingId === r.id}
+                            selected={selectedType === 'request' && selectedId === r.id}
+                            onClick={() => { setSelectedType('request'); setSelectedId(r.id); openDetail() }}
+                            onAccept={() => handleRespond(r.id, 'accept')}
+                            onDecline={() => handleRespond(r.id, 'decline')}
+                          />
+                        ))}
+                      </div>
+                    : <EmptyList label="AUCUNE DEMANDE REÇUE" />
+                ) : (
+                  sent.length > 0
                     ? <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                         {sent.map(r => (
                           <SentRequestRow key={r.id} r={r} onlineIds={onlineIds} loading={respondingId === r.id}
@@ -687,8 +694,7 @@ export default function InboxClient({
                         ))}
                       </div>
                     : <EmptyList label="AUCUNE DEMANDE ENVOYÉE" />
-                  }
-                </div>
+                )}
               </>
             )}
           </div>
