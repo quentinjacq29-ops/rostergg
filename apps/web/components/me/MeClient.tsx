@@ -348,6 +348,19 @@ export default function MeClient(props: MeClientProps) {
     }, DEBOUNCE_MS)
   }, [])
 
+  // ── Sauvegarde immédiate (actions discrètes : rôles/styles/langues/vocal) ──
+  // Évite la course debounce↔navigation : le feed reflète le changement tout de suite.
+  const saveNow = useCallback(async (patch: object) => {
+    if (saveTimer.current) clearTimeout(saveTimer.current)
+    setSaved(false)
+    await fetch('/api/me/prefs', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(patch),
+    })
+    setSaved(true)
+  }, [])
+
   // ── Debounced autosave pools ──────────────────────────────────────────────
   const schedSavePools = useCallback((newPools: Record<string, string[]>) => {
     setSaved(false)
@@ -379,24 +392,24 @@ export default function MeClient(props: MeClientProps) {
   function updRoles(v: string) {
     if (!roles.includes(v) && roles.length >= 2) return
     const next = toggleRole(setRoles, roles, v)
-    schedSave({ main_roles: next })
+    saveNow({ main_roles: next })
   }
   function updLooking(v: string) {
     const next = toggleRole(setLooking, looking, v)
-    schedSave({ looking_for_roles: next })
+    saveNow({ looking_for_roles: next })
   }
   function updStyles(v: string) {
     const next = toggleRole(setStyles, styles, v)
-    schedSave({ playstyles: next })
+    saveNow({ playstyles: next })
   }
   function updLangs(v: string) {
     const next = toggleRole(setLangs, langs, v)
-    schedSave({ languages: next })
+    saveNow({ languages: next })
   }
   function updVoice() {
     const next = !voice
     setVoice(next)
-    schedSave({ voice_required: next })
+    saveNow({ voice_required: next })
   }
   function updAvail(weekday: number, slot: number, val: number) {
     setAvGrid(prev => {
