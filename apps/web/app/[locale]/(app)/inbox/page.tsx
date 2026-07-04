@@ -22,6 +22,21 @@ export default async function InboxPage() {
     .eq('status', 'pending')
     .order('created_at', { ascending: false })
 
+  // 1b. Demandes envoyées par moi, en attente — avec profil du destinataire
+  const { data: rawSent } = await supabase
+    .from('duo_requests')
+    .select(`
+      id, match_score, message, created_at,
+      recipient:profiles!to_profile(
+        id, display_name, avatar_url,
+        riot_accounts(game_name, tag_line, ranks(tier, division, league_points, wins, losses, queue)),
+        matching_prefs(main_roles, looking_for_roles, champion_pool)
+      )
+    `)
+    .eq('from_profile', user.id)
+    .eq('status', 'pending')
+    .order('created_at', { ascending: false })
+
   // 2. Conversations actives
   const { data: rawAccepted } = await supabase
     .from('duo_requests')
@@ -139,6 +154,15 @@ export default async function InboxPage() {
     sender:     normProfile(r.sender)!,
   }))
 
+  // Demandes envoyées : on réutilise le type, "sender" = le destinataire affiché
+  const sentRequests: PendingRequest[] = (rawSent ?? []).map((r: any) => ({
+    id:         r.id,
+    matchScore: r.match_score,
+    message:    r.message,
+    createdAt:  r.created_at,
+    sender:     normProfile(r.recipient)!,
+  }))
+
   const conversations: Conversation[] = (rawAccepted ?? []).map((r: any) => {
     const isFromMe = r.from_profile === user.id
     const other    = normProfile(isFromMe ? r.other_to : r.other_from)!
@@ -166,6 +190,7 @@ export default async function InboxPage() {
       currentUserRole={currentUserRole}
       currentUserName={currentUserName}
       pendingRequests={pendingRequests}
+      sentRequests={sentRequests}
       conversations={conversations}
     />
   )

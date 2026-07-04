@@ -170,6 +170,45 @@ function RequestRow({ r, selected, onlineIds, onClick }: {
   )
 }
 
+// ── SentRequestRow ────────────────────────────────────────────────────────
+function SentRequestRow({ r, selected, onlineIds, onClick, onCancel, loading }: {
+  r: PendingRequest; selected: boolean; onlineIds: Set<string>; onClick: () => void; onCancel: () => void; loading: boolean
+}) {
+  const rc   = ROLE_META[(r.sender.mainRole ?? 'FILL').toUpperCase()]?.c ?? T.textDim
+  const name = r.sender.gameName ?? r.sender.displayName ?? '—'
+  const hue  = nameHue(name)
+  const online = onlineIds.has(r.sender.id)
+  return (
+    <button onClick={onClick} style={{ position: 'relative', display: 'flex', gap: 12, alignItems: 'flex-start', width: '100%', textAlign: 'left', padding: '13px 14px', borderRadius: 13, cursor: 'pointer', background: selected ? `linear-gradient(100deg, ${T.queue}1c, transparent)` : 'rgba(255,255,255,0.018)', border: `1px solid ${selected ? T.queue + '55' : T.line}` }}>
+      {selected && <span style={{ position: 'absolute', left: -1, top: 13, bottom: 13, width: 3, borderRadius: 3, background: T.queue, boxShadow: `0 0 8px ${T.queue}` }} />}
+      <Avatar initials={name.slice(0, 2).toUpperCase()} size={42} rank={r.sender.rankKey ?? 'iron'} hue={hue} online={online} />
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+          <span style={{ fontFamily: T.display, fontSize: 15, color: T.text, letterSpacing: '0.03em' }}>{name}</span>
+          {r.sender.mainRole && (
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, padding: '2px 5px', borderRadius: 5, background: `${rc}1a`, border: `1px solid ${rc}40` }}>
+              <RoleIcon role={r.sender.mainRole} size={9} active />
+            </span>
+          )}
+          <span style={{ marginLeft: 'auto', fontFamily: T.mono, fontSize: 9, color: T.textMute, letterSpacing: '0.06em' }}>{formatTime(r.createdAt)}</span>
+        </div>
+        {r.message && (
+          <div style={{ fontFamily: T.body, fontSize: 12, color: T.textDim, marginTop: 5, lineHeight: 1.4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' } as React.CSSProperties}>{r.message}</div>
+        )}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginTop: 9 }}>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontFamily: T.mono, fontSize: 9.5, color: T.queue, letterSpacing: '0.08em' }}>
+            <span style={{ width: 6, height: 6, borderRadius: '50%', background: T.queue, boxShadow: `0 0 8px ${T.queue}` }} />EN ATTENTE
+          </span>
+          <div style={{ flex: 1 }} />
+          <span role="button" onClick={e => { e.stopPropagation(); if (!loading) onCancel() }} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 8, background: 'rgba(255,255,255,0.05)', border: `1px solid ${T.lineStrong}`, fontFamily: T.mono, fontSize: 9, color: T.textDim, letterSpacing: '0.06em', cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.5 : 1 }}>
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke={T.textDim} strokeWidth="2.6" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12" /></svg>ANNULER
+          </span>
+        </div>
+      </div>
+    </button>
+  )
+}
+
 // ── ConvoRow ──────────────────────────────────────────────────────────────
 function ConvoRow({ conv, selected, onlineIds, unread, onClick }: {
   conv: Conversation; selected: boolean; onlineIds: Set<string>; unread: number; onClick: () => void
@@ -350,12 +389,14 @@ export default function InboxClient({
   currentUserRole,
   currentUserName,
   pendingRequests: initialPending,
+  sentRequests: initialSent,
   conversations: initialConversations,
 }: {
   userId: string
   currentUserRole: string | null
   currentUserName: string
   pendingRequests: PendingRequest[]
+  sentRequests: PendingRequest[]
   conversations: Conversation[]
 }) {
   const supabase = createClient()
@@ -375,14 +416,15 @@ export default function InboxClient({
     params.get('conv') ? 'convos' : (initialPending.length > 0 ? 'requests' : 'convos')
   )
   const [reqDir, setReqDir] = useState<'recues' | 'envoyees'>('recues')
-  const sentCount = 0 // demandes envoyées — branché à l'étape 4
+  const [sent, setSent] = useState(initialSent)
+  const sentCount = sent.length
   // Mobile : liste plein écran ↔ détail plein écran (le desktop montre les 3 panneaux)
   const [mobileView, setMobileView] = useState<'list' | 'detail'>('list')
   const openDetail = () => setMobileView('detail')
 
   // Sélection
   const initialConvId = params.get('conv')
-  const [selectedType, setSelectedType] = useState<'request' | 'conversation' | null>(
+  const [selectedType, setSelectedType] = useState<'request' | 'sentRequest' | 'conversation' | null>(
     initialConvId ? 'conversation' : (initialPending.length > 0 ? 'request' : (initialConversations.length > 0 ? 'conversation' : null))
   )
   const [selectedId, setSelectedId] = useState<string | null>(
@@ -401,6 +443,7 @@ export default function InboxClient({
 
   // Derived
   const selectedRequest = pending.find(r => r.id === selectedId) ?? null
+  const selectedSent    = sent.find(r => r.id === selectedId) ?? null
   const selectedConv    = conversations.find(c => c.conversationId === selectedId) ?? null
   const convId          = selectedType === 'conversation' ? selectedId : null
 
@@ -514,6 +557,19 @@ export default function InboxClient({
     }
   }
 
+  async function handleCancel(requestId: string) {
+    setRespondingId(requestId)
+    const res = await fetch(`/api/duo/request?id=${encodeURIComponent(requestId)}`, { method: 'DELETE' })
+    setRespondingId(null)
+    if (res.ok) {
+      const remaining = sent.filter(r => r.id !== requestId)
+      setSent(remaining)
+      setSelectedId(remaining[0]?.id ?? null)
+      setSelectedType(remaining.length > 0 ? 'sentRequest' : null)
+      setMobileView('list')
+    }
+  }
+
   async function handleSendMessage() {
     if (!convId || !msgInput.trim() || sending) return
     setSending(true)
@@ -595,7 +651,11 @@ export default function InboxClient({
                   <Segmented
                     items={[{ id: 'recues', label: 'REÇUES' }, { id: 'envoyees', label: 'ENVOYÉES' }]}
                     active={reqDir}
-                    onSelect={id => { setReqDir(id as 'recues' | 'envoyees'); if (id === 'recues' && pending[0]) { setSelectedType('request'); setSelectedId(pending[0].id) } }}
+                    onSelect={id => {
+                      setReqDir(id as 'recues' | 'envoyees')
+                      if (id === 'recues' && pending[0]) { setSelectedType('request'); setSelectedId(pending[0].id) }
+                      else if (id === 'envoyees' && sent[0]) { setSelectedType('sentRequest'); setSelectedId(sent[0].id) }
+                    }}
                   />
                 </div>
 
@@ -613,10 +673,21 @@ export default function InboxClient({
                   : <EmptyList label="AUCUNE DEMANDE REÇUE" />
                 }
 
-                {/* Section Demandes envoyées (branché à l'étape 4) */}
+                {/* Section Demandes envoyées */}
                 <div style={{ paddingTop: 14 }}>
                   <SectionLabel label="DEMANDES ENVOYÉES" count={sentCount} accent={T.textDim} />
-                  <EmptyList label="AUCUNE DEMANDE ENVOYÉE" sub="· BRANCHÉ À L'ÉTAPE 4 ·" />
+                  {sent.length > 0
+                    ? <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                        {sent.map(r => (
+                          <SentRequestRow key={r.id} r={r} onlineIds={onlineIds} loading={respondingId === r.id}
+                            selected={selectedType === 'sentRequest' && selectedId === r.id}
+                            onClick={() => { setSelectedType('sentRequest'); setSelectedId(r.id); openDetail() }}
+                            onCancel={() => handleCancel(r.id)}
+                          />
+                        ))}
+                      </div>
+                    : <EmptyList label="AUCUNE DEMANDE ENVOYÉE" />
+                  }
                 </div>
               </>
             )}
@@ -631,6 +702,13 @@ export default function InboxClient({
               onAccept={() => handleRespond(selectedRequest.id, 'accept')}
               onDecline={() => handleRespond(selectedRequest.id, 'decline')}
               onBack={() => setMobileView('list')}
+            />
+          ) : selectedType === 'sentRequest' && selectedSent ? (
+            <RequestDetailPane
+              r={selectedSent} onlineIds={onlineIds} respondingId={respondingId}
+              onAccept={() => {}} onDecline={() => {}}
+              onBack={() => setMobileView('list')}
+              sent onCancel={() => handleCancel(selectedSent.id)}
             />
           ) : selectedType === 'conversation' && selectedConv ? (
             <ChatPane
@@ -664,6 +742,22 @@ export default function InboxClient({
               online={onlineIds.has(selectedRequest.sender.id)}
               pendingLabel="RIOT ID MASQUÉ · DEMANDE EN ATTENTE"
             />
+          ) : selectedType === 'sentRequest' && selectedSent ? (
+            <ContextRail
+              className="rgg-inbox-rail"
+              name={selectedSent.sender.gameName ?? selectedSent.sender.displayName ?? '—'}
+              initials={(selectedSent.sender.gameName ?? selectedSent.sender.displayName ?? '—').slice(0,2).toUpperCase()}
+              hue={nameHue(selectedSent.sender.gameName ?? selectedSent.sender.displayName ?? '—')}
+              rankKey={selectedSent.sender.rankKey}
+              division={selectedSent.sender.division}
+              lp={selectedSent.sender.lp}
+              matchScore={selectedSent.matchScore}
+              mainRole={selectedSent.sender.mainRole}
+              rightRole={selectedSent.sender.lookingFor}
+              champPool={selectedSent.sender.champPool}
+              online={onlineIds.has(selectedSent.sender.id)}
+              pendingLabel="RIOT ID MASQUÉ · DEMANDE EN ATTENTE"
+            />
           ) : selectedType === 'conversation' && selectedConv ? (
             <ContextRail
               className="rgg-inbox-rail"
@@ -695,9 +789,10 @@ function BackBtn({ onClick }: { onClick: () => void }) {
   )
 }
 
-function RequestDetailPane({ r, onlineIds, respondingId, onAccept, onDecline, onBack }: {
+function RequestDetailPane({ r, onlineIds, respondingId, onAccept, onDecline, onBack, sent = false, onCancel }: {
   r: PendingRequest; onlineIds: Set<string>; respondingId: string | null
   onAccept: () => void; onDecline: () => void; onBack: () => void
+  sent?: boolean; onCancel?: () => void
 }) {
   const name    = r.sender.gameName ?? r.sender.displayName ?? '—'
   const init    = name.slice(0, 2).toUpperCase()
@@ -739,7 +834,7 @@ function RequestDetailPane({ r, onlineIds, respondingId, onAccept, onDecline, on
         <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 18 }}>
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '7px 14px', borderRadius: 999, background: `${T.cyan}14`, border: `1px solid ${T.cyan}40`, fontFamily: T.mono, fontSize: 10, color: T.cyan, letterSpacing: '0.14em' }}>
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={T.cyan} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
-            {name.toUpperCase()} T&apos;A ENVOYÉ UNE DEMANDE DE DUO
+            {sent ? <>TU AS ENVOYÉ UNE DEMANDE À {name.toUpperCase()}</> : <>{name.toUpperCase()} T&apos;A ENVOYÉ UNE DEMANDE DE DUO</>}
           </span>
         </div>
         {r.message && (
@@ -771,7 +866,9 @@ function RequestDetailPane({ r, onlineIds, respondingId, onAccept, onDecline, on
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 16, padding: '11px 14px', borderRadius: 11, background: 'rgba(255,255,255,0.03)', border: `1px solid ${T.line}` }}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={T.textMute} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M19 11H5a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2zM7 11V7a5 5 0 0 1 10 0v4" /></svg>
             <span style={{ fontFamily: T.body, fontSize: 12.5, color: T.textDim, lineHeight: 1.4 }}>
-              En acceptant, le chat s&apos;ouvre et vos <b style={{ color: T.text }}>Riot ID</b> sont révélés des deux côtés.
+              {sent
+                ? <>En attente de la réponse de <b style={{ color: T.text }}>{name}</b>. Le chat et les <b style={{ color: T.text }}>Riot ID</b> se débloquent à l&apos;acceptation.</>
+                : <>En acceptant, le chat s&apos;ouvre et vos <b style={{ color: T.text }}>Riot ID</b> sont révélés des deux côtés.</>}
             </span>
           </div>
           {r.sender.gameName && r.sender.tagLine && (
@@ -781,25 +878,36 @@ function RequestDetailPane({ r, onlineIds, respondingId, onAccept, onDecline, on
               Voir le profil de {name}
             </Link>
           )}
-          <div style={{ display: 'flex', gap: 12, marginTop: 18 }}>
-            <button onClick={onDecline} disabled={loading} style={{ flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '14px', borderRadius: 12, background: 'rgba(255,255,255,0.05)', border: `1px solid ${T.lineStrong}`, color: T.textDim, cursor: loading ? 'not-allowed' : 'pointer', fontFamily: T.display, fontSize: 13, letterSpacing: '0.08em', textTransform: 'uppercase' as const, opacity: loading ? 0.5 : 1 }}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={T.textDim} strokeWidth="2.6" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12" /></svg>Refuser
-            </button>
-            <button onClick={onAccept} disabled={loading} style={{ flex: 1.6, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '14px', borderRadius: 12, border: 'none', background: `linear-gradient(135deg, ${T.live}, ${T.cyan})`, color: '#001018', cursor: loading ? 'not-allowed' : 'pointer', fontFamily: T.display, fontSize: 13, letterSpacing: '0.08em', textTransform: 'uppercase' as const, fontWeight: 700, whiteSpace: 'nowrap', boxShadow: `0 14px 32px -12px ${T.live}`, opacity: loading ? 0.7 : 1 }}>
-              {loading
-                ? <span style={{ width: 14, height: 14, borderRadius: '50%', border: '2px solid #001018', borderTopColor: 'transparent', animation: 'rgg-spin 0.7s linear infinite', display: 'inline-block' }} />
-                : <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#001018" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5" /></svg>
-              }
-              Accepter le duo
-            </button>
-          </div>
+          {sent ? (
+            <div style={{ display: 'flex', gap: 12, marginTop: 18 }}>
+              <button onClick={onCancel} disabled={loading} style={{ flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '14px', borderRadius: 12, background: 'rgba(255,255,255,0.05)', border: `1px solid ${T.lineStrong}`, color: T.textDim, cursor: loading ? 'not-allowed' : 'pointer', fontFamily: T.display, fontSize: 13, letterSpacing: '0.08em', textTransform: 'uppercase' as const, opacity: loading ? 0.5 : 1 }}>
+                {loading
+                  ? <span style={{ width: 14, height: 14, borderRadius: '50%', border: `2px solid ${T.textDim}`, borderTopColor: 'transparent', animation: 'rgg-spin 0.7s linear infinite', display: 'inline-block' }} />
+                  : <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={T.textDim} strokeWidth="2.6" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12" /></svg>}
+                Annuler la demande
+              </button>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', gap: 12, marginTop: 18 }}>
+              <button onClick={onDecline} disabled={loading} style={{ flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '14px', borderRadius: 12, background: 'rgba(255,255,255,0.05)', border: `1px solid ${T.lineStrong}`, color: T.textDim, cursor: loading ? 'not-allowed' : 'pointer', fontFamily: T.display, fontSize: 13, letterSpacing: '0.08em', textTransform: 'uppercase' as const, opacity: loading ? 0.5 : 1 }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={T.textDim} strokeWidth="2.6" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12" /></svg>Refuser
+              </button>
+              <button onClick={onAccept} disabled={loading} style={{ flex: 1.6, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '14px', borderRadius: 12, border: 'none', background: `linear-gradient(135deg, ${T.live}, ${T.cyan})`, color: '#001018', cursor: loading ? 'not-allowed' : 'pointer', fontFamily: T.display, fontSize: 13, letterSpacing: '0.08em', textTransform: 'uppercase' as const, fontWeight: 700, whiteSpace: 'nowrap', boxShadow: `0 14px 32px -12px ${T.live}`, opacity: loading ? 0.7 : 1 }}>
+                {loading
+                  ? <span style={{ width: 14, height: 14, borderRadius: '50%', border: '2px solid #001018', borderTopColor: 'transparent', animation: 'rgg-spin 0.7s linear infinite', display: 'inline-block' }} />
+                  : <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#001018" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5" /></svg>
+                }
+                Accepter le duo
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
       <div style={{ flexShrink: 0, padding: '14px 24px 18px', borderTop: `1px solid ${T.line}` }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '14px 18px', borderRadius: 14, background: 'rgba(255,255,255,0.02)', border: `1px dashed ${T.lineStrong}` }}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={T.textMute} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M19 11H5a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2zM7 11V7a5 5 0 0 1 10 0v4" /></svg>
-          <span style={{ fontFamily: T.body, fontSize: 13.5, color: T.textMute }}>Accepte la demande de {name} pour débloquer le chat.</span>
+          <span style={{ fontFamily: T.body, fontSize: 13.5, color: T.textMute }}>{sent ? `En attente de la réponse de ${name} · le chat s'ouvre à l'acceptation.` : `Accepte la demande de ${name} pour débloquer le chat.`}</span>
         </div>
       </div>
     </div>
