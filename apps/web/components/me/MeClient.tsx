@@ -1,5 +1,6 @@
 'use client'
 import { useState, useRef, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 import Avatar, { RANK_COLORS } from '@/components/ui/Avatar'
 import RoleIcon, { ROLE_META } from '@/components/ui/RoleIcon'
 import { championIconUrl, profileIconUrl } from '@/lib/riot/assets'
@@ -334,6 +335,8 @@ export default function MeClient(props: MeClientProps) {
   // rôles joués avec au moins 1 champion dans la pool
   const poolRoles = roles.filter(r => (pools[r] ?? []).length > 0)
 
+  const router = useRouter()
+
   // ── Debounced autosave prefs ──────────────────────────────────────────────
   const schedSave = useCallback((patch: object) => {
     setSaved(false)
@@ -345,8 +348,9 @@ export default function MeClient(props: MeClientProps) {
         body: JSON.stringify(patch),
       })
       setSaved(true)
+      router.refresh() // invalide le cache → /duo verra les prefs à jour
     }, DEBOUNCE_MS)
-  }, [])
+  }, [router])
 
   // ── Sauvegarde immédiate (actions discrètes : rôles/styles/langues/vocal) ──
   // Évite la course debounce↔navigation : le feed reflète le changement tout de suite.
@@ -359,7 +363,8 @@ export default function MeClient(props: MeClientProps) {
       body: JSON.stringify(patch),
     })
     setSaved(true)
-  }, [])
+    router.refresh() // invalide le cache → /duo & aperçu à jour immédiatement
+  }, [router])
 
   // ── Debounced autosave pools ──────────────────────────────────────────────
   const schedSavePools = useCallback((newPools: Record<string, string[]>) => {
@@ -372,8 +377,9 @@ export default function MeClient(props: MeClientProps) {
         body: JSON.stringify({ champion_pool: newPools }),
       })
       setSaved(true)
+      router.refresh()
     }, DEBOUNCE_MS)
-  }, [])
+  }, [router])
 
   function updBio(v: string) {
     const val = v.slice(0, BIO_MAX)
