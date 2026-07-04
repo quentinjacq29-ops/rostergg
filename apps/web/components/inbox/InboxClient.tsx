@@ -467,6 +467,8 @@ export default function InboxClient({
   const selectedSent    = sent.find(r => r.id === selectedId) ?? null
   const selectedConv    = conversations.find(c => c.conversationId === selectedId) ?? null
   const convId          = selectedType === 'conversation' ? selectedId : null
+  const convIdRef       = useRef(convId)
+  useEffect(() => { convIdRef.current = convId }, [convId])
 
   // ── Messages Realtime ─────────────────────────────────────────────────
   const loadMessages = useCallback(async (cid: string) => {
@@ -567,6 +569,23 @@ export default function InboxClient({
         if (!del?.id) return
         setPending(prev => prev.filter(r => r.id !== del.id))
         setSent(prev => prev.filter(r => r.id !== del.id))
+      })
+      // Nouveau message dans n'importe quelle conversation → maj de la liste (aperçu,
+      // remontée en tête, non-lus) même si la conv n'est pas ouverte. RLS limite aux
+      // convs de l'utilisateur.
+      .on('postgres_changes', {
+        event: 'INSERT', schema: 'public', table: 'messages',
+      }, payload => {
+        const msg = payload.new as Message
+        setConversations(prev => {
+          const idx = prev.findIndex(c => c.conversationId === msg.conversation_id)
+          if (idx === -1) return prev
+          const updated = { ...prev[idx], lastMessage: { body: msg.body, sender_id: msg.sender_id, created_at: msg.created_at } }
+          return [updated, ...prev.slice(0, idx), ...prev.slice(idx + 1)]
+        })
+        if (msg.conversation_id !== convIdRef.current && msg.sender_id !== userId) {
+          setUnreadCounts(prev => ({ ...prev, [msg.conversation_id]: (prev[msg.conversation_id] ?? 0) + 1 }))
+        }
       })
       .subscribe()
     return () => { supabase.removeChannel(ch) }
