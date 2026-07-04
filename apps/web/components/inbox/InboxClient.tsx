@@ -673,17 +673,6 @@ export default function InboxClient({
     setSending(false)
   }
 
-  async function handleInviteToLobby() {
-    if (!convId) return
-    const { data, error } = await supabase.from('messages').insert({
-      conversation_id: convId,
-      sender_id: userId,
-      body: `${currentUserName} a créé un lobby · RANKED SOLO/DUO`,
-      kind: 'lobby_invite',
-    }).select('id, conversation_id, sender_id, body, kind, created_at').single()
-    if (error) { console.error('[inbox] lobby invite error:', error.code, error.message); return }
-    setMessages(prev => prev.some(m => m.id === data.id) ? prev : [...prev, data as Message])
-  }
 
   const pendingCount = pending.length
   const convCount    = conversations.length
@@ -797,7 +786,6 @@ export default function InboxClient({
               messagesEndRef={messagesEndRef}
               onInputChange={v => { setMsgInput(v); if (v) broadcastTyping() }}
               onSend={handleSendMessage}
-              onInviteToLobby={handleInviteToLobby}
               onBack={() => setMobileView('list')}
             />
           ) : (
@@ -995,13 +983,12 @@ function RequestDetailPane({ r, onlineIds, respondingId, onAccept, onDecline, on
 }
 
 // ── ChatPane ──────────────────────────────────────────────────────────────
-function ChatPane({ conv, userId, messages, onlineIds, msgInput, sending, peerTyping, messagesEndRef, onInputChange, onSend, onInviteToLobby, onBack }: {
+function ChatPane({ conv, userId, messages, onlineIds, msgInput, sending, peerTyping, messagesEndRef, onInputChange, onSend, onBack }: {
   conv: Conversation; userId: string; messages: Message[]; onlineIds: Set<string>
   msgInput: string; sending: boolean; peerTyping: boolean
   messagesEndRef: React.RefObject<HTMLDivElement>
   onInputChange: (v: string) => void
   onSend: () => void
-  onInviteToLobby: () => void
   onBack: () => void
 }) {
   const name    = conv.other.gameName ?? conv.other.displayName ?? '—'
@@ -1012,6 +999,14 @@ function ChatPane({ conv, userId, messages, onlineIds, msgInput, sending, peerTy
   const rl      = rankLabel(conv.other.rankKey, conv.other.division)
   const rkColor = RANK_COLORS[rk] ?? '#9aa2bf'
   const rc      = ROLE_META[(conv.other.mainRole ?? 'FILL').toUpperCase()]?.c ?? T.textDim
+  // Riot ID révélé (conversation acceptée)
+  const riotId  = conv.other.gameName && conv.other.tagLine ? `${conv.other.gameName}#${conv.other.tagLine}` : null
+
+  const [copied, setCopied] = useState(false)
+  function copyRiotId() {
+    if (!riotId) return
+    navigator.clipboard?.writeText(riotId).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1600) }).catch(() => {})
+  }
 
   function handleKey(e: React.KeyboardEvent) {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); onSend() }
@@ -1032,26 +1027,46 @@ function ChatPane({ conv, userId, messages, onlineIds, msgInput, sending, peerTy
                 <RoleIcon role={conv.other.mainRole} size={11} active />
               </span>
             )}
-            {conv.matchScore !== null && (
-              <span style={{ fontFamily: T.mono, fontSize: 10, color: T.cyan, letterSpacing: '0.08em' }}>{conv.matchScore}% MATCH</span>
-            )}
           </div>
           <div style={{ marginTop: 4 }}><StatusDot online={online} /></div>
         </div>
-        {/* Invite to lobby */}
-        <button onClick={onInviteToLobby} style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '9px 16px', borderRadius: 11, border: `1px solid ${T.violet}44`, background: `${T.violet}12`, color: T.violet, cursor: 'pointer', fontFamily: T.mono, fontSize: 10, letterSpacing: '0.1em', whiteSpace: 'nowrap' }}>
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={T.violet} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-          INVITE TO LOBBY
-        </button>
+        {/* Copier le Riot ID */}
+        {riotId && (
+          <button onClick={copyRiotId} style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '10px 16px', borderRadius: 11, border: 'none', cursor: 'pointer', background: copied ? `${T.live}1f` : `linear-gradient(135deg, ${T.cyan}, ${T.violet})`, color: copied ? T.live : '#001018', fontFamily: T.display, fontSize: 12, letterSpacing: '0.05em', textTransform: 'uppercase', whiteSpace: 'nowrap', boxShadow: copied ? 'none' : `0 6px 16px -8px ${T.cyan}` }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 012-2h10"/></svg>
+            {copied ? 'Copié !' : 'Copier le Riot ID'}
+          </button>
+        )}
       </div>
 
       {/* Messages */}
       <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '22px 24px', display: 'flex', flexDirection: 'column', gap: 4 }}>
-        <div style={{ textAlign: 'center', fontFamily: T.mono, fontSize: 9.5, color: T.textMute, letterSpacing: '0.16em', margin: '0 0 10px' }}>AUJOURD&apos;HUI</div>
-        {messages.length === 0 && (
-          <div style={{ textAlign: 'center', padding: '40px 0', fontFamily: T.mono, fontSize: 10, color: T.textMute, letterSpacing: '0.14em' }}>AUCUN MESSAGE · ENVOIE LE PREMIER</div>
+        {/* Bandeau acceptation */}
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 12 }}>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '7px 14px', borderRadius: 999, background: `${T.live}14`, border: `1px solid ${T.live}40`, fontFamily: T.mono, fontSize: 10, color: T.live, letterSpacing: '0.14em' }}>
+            <span style={{ width: 6, height: 6, borderRadius: '50%', background: T.live, boxShadow: `0 0 8px ${T.live}` }} />DEMANDE DE DUO ACCEPTÉE{conv.matchScore !== null ? ` · ${conv.matchScore}% MATCH` : ''}
+          </span>
+        </div>
+        {/* Carte Riot ID révélé */}
+        {riotId && (
+          <div style={{ maxWidth: 460, alignSelf: 'center', width: '100%', borderRadius: 15, padding: 16, marginBottom: 18, background: `linear-gradient(135deg, ${T.live}14, ${T.cyan}10)`, border: `1px solid ${T.live}3a` }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontFamily: T.mono, fontSize: 9.5, color: T.live, letterSpacing: '0.12em' }}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={T.live} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M7 11V7a5 5 0 0110 0M5 11h14v10H5z" /></svg>RIOT ID RÉVÉLÉ
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginTop: 12 }}>
+              <span style={{ fontFamily: T.display, fontSize: 22, color: T.text, letterSpacing: '0.03em' }}>{conv.other.gameName}</span>
+              <span style={{ fontFamily: T.mono, fontSize: 13, color: T.textDim }}>#{conv.other.tagLine}</span>
+              <button onClick={copyRiotId} style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: 6, padding: '9px 13px', borderRadius: 10, background: copied ? `${T.live}1f` : 'rgba(255,255,255,0.06)', border: `1px solid ${copied ? T.live + '66' : T.lineStrong}`, color: copied ? T.live : T.text, fontFamily: T.mono, fontSize: 10, letterSpacing: '0.06em', textTransform: 'uppercase', cursor: 'pointer' }}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="12" height="12" rx="2" /><path d="M5 15V5a2 2 0 012-2h10" /></svg>{copied ? 'Copié' : 'Copier'}
+              </button>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginTop: 11, fontFamily: T.body, fontSize: 11.5, color: T.textDim, lineHeight: 1.4 }}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={T.live} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M20 6L9 17l-5-5" /></svg>Ajoute ce Riot ID dans League pour l&apos;inviter en partie.
+            </div>
+          </div>
         )}
-        {messages.map(m => (
+        <div style={{ textAlign: 'center', fontFamily: T.mono, fontSize: 9.5, color: T.textMute, letterSpacing: '0.16em', margin: '0 0 10px' }}>AUJOURD&apos;HUI</div>
+        {messages.filter(m => !(m.kind === 'system' && m.body.startsWith('DUO REQUEST ACCEPTED'))).map(m => (
           <Bubble key={m.id} m={m} isMe={m.sender_id === userId} otherInitials={init} otherHue={hue} otherRankKey={rk} />
         ))}
         {/* Typing indicator */}
