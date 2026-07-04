@@ -484,32 +484,20 @@ function DuoDetailPane({ item, avail, champPool, masteryMap, online, requestInfo
       {/* Sticky CTA */}
       <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 12, padding: '16px 34px', borderTop: `1px solid ${T.lineStrong}`, background: 'rgba(10,12,20,0.86)', backdropFilter: 'blur(14px)' }}>
 
-        {/* ── Cas 1 : pas de demande active → boutons standard */}
+        {/* ── Cas 1 : pas de demande active → envoyer un duo */}
         {!ri && (
-          <>
-            <button onClick={onOpenRequest} style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '14px 22px', borderRadius: 10, border: 'none', cursor: 'pointer', background: `linear-gradient(135deg, ${T.cyan}, ${T.violet})`, color: '#001018', fontFamily: T.display, fontSize: 14, letterSpacing: '0.1em', boxShadow: `0 0 0 1px ${T.cyan}66, 0 8px 24px -8px ${T.cyan}80` }}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#001018" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
-              Send duo request
-            </button>
-            <button disabled style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '13px 18px', borderRadius: 10, cursor: 'not-allowed', background: 'rgba(255,255,255,0.02)', border: `1px solid ${T.line}`, color: T.textMute, fontFamily: T.body, fontSize: 14, fontWeight: 600, opacity: 0.5 }}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a8 8 0 01-11.5 7.2L4 21l1.8-5.5A8 8 0 1121 12z" /></svg>
-              Message
-            </button>
-          </>
+          <button onClick={onOpenRequest} style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '14px 22px', borderRadius: 10, border: 'none', cursor: 'pointer', background: `linear-gradient(135deg, ${T.cyan}, ${T.violet})`, color: '#001018', fontFamily: T.display, fontSize: 14, letterSpacing: '0.1em', boxShadow: `0 0 0 1px ${T.cyan}66, 0 8px 24px -8px ${T.cyan}80` }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#001018" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
+            Send duo request
+          </button>
         )}
 
         {/* ── Cas 2 : demande envoyée par moi, en attente */}
         {isPendingFromMe && (
-          <>
-            <button disabled style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '14px 22px', borderRadius: 10, cursor: 'not-allowed', background: 'rgba(255,255,255,0.06)', border: `1px solid ${T.lineStrong}`, color: T.textDim, fontFamily: T.display, fontSize: 14, letterSpacing: '0.1em' }}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={T.live} strokeWidth="2.5" strokeLinecap="round"><path d="M20 6L9 17l-5-5"/></svg>
-              Demande envoyée
-            </button>
-            <button disabled style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '13px 18px', borderRadius: 10, cursor: 'not-allowed', background: 'rgba(255,255,255,0.02)', border: `1px solid ${T.line}`, color: T.textMute, fontFamily: T.body, fontSize: 14, fontWeight: 600, opacity: 0.5 }}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a8 8 0 01-11.5 7.2L4 21l1.8-5.5A8 8 0 1121 12z" /></svg>
-              Message
-            </button>
-          </>
+          <button disabled style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '14px 22px', borderRadius: 10, cursor: 'not-allowed', background: 'rgba(255,255,255,0.06)', border: `1px solid ${T.lineStrong}`, color: T.textDim, fontFamily: T.display, fontSize: 14, letterSpacing: '0.1em' }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={T.live} strokeWidth="2.5" strokeLinecap="round"><path d="M20 6L9 17l-5-5"/></svg>
+            Demande envoyée
+          </button>
         )}
 
         {/* ── Cas 3 : cette personne m'a envoyé une demande */}
@@ -780,29 +768,28 @@ function MCard({ item, online, expanded, pool, request, onToggle, onOpenRequest,
                   <button onClick={() => onAccept(ri.id)} style={{ flex: 1, height: 48, borderRadius: 13, border: 'none', background: `linear-gradient(135deg, ${T.live}cc, ${T.cyan})`, color: '#001810', fontFamily: T.display, fontSize: 13, letterSpacing: '0.03em', textTransform: 'uppercase', fontWeight: 700, cursor: 'pointer' }}>Accepter</button>
                 </>
               ) : (
-                <>
-                  <button
-                    onClick={() => isAccepted && ri?.conversationId && onMessage(ri.conversationId)}
-                    disabled={!isAccepted}
-                    style={{ padding: '0 14px', height: 48, borderRadius: 13, background: 'rgba(255,255,255,0.05)', border: `1px solid ${T.lineStrong}`, color: isAccepted ? T.text : T.textMute, display: 'inline-flex', alignItems: 'center', gap: 8, cursor: isAccepted ? 'pointer' : 'not-allowed', opacity: isAccepted ? 1 : 0.5, fontFamily: T.display, fontSize: 12, letterSpacing: '0.03em', textTransform: 'uppercase', whiteSpace: 'nowrap', flexShrink: 0 }}>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" /></svg>
-                    Message
-                  </button>
-                  {isAccepted ? (
+                isAccepted ? (
+                  <>
+                    <button
+                      onClick={() => ri?.conversationId && onMessage(ri.conversationId)}
+                      style={{ padding: '0 14px', height: 48, borderRadius: 13, background: 'rgba(255,255,255,0.05)', border: `1px solid ${T.lineStrong}`, color: T.text, display: 'inline-flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontFamily: T.display, fontSize: 12, letterSpacing: '0.03em', textTransform: 'uppercase', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" /></svg>
+                      Message
+                    </button>
                     <span style={{ flex: 1, height: 48, borderRadius: 13, background: `${T.live}18`, border: `1px solid ${T.live}44`, color: T.live, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, fontFamily: T.display, fontSize: 13, letterSpacing: '0.03em', textTransform: 'uppercase', fontWeight: 700 }}>
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={T.live} strokeWidth="2.5" strokeLinecap="round"><path d="M20 6L9 17l-5-5" /></svg>Duo actif
                     </span>
-                  ) : isPendingFromMe ? (
-                    <span style={{ flex: 1, height: 48, borderRadius: 13, background: 'rgba(255,255,255,0.06)', border: `1px solid ${T.lineStrong}`, color: T.textDim, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, fontFamily: T.display, fontSize: 13, letterSpacing: '0.03em', textTransform: 'uppercase', fontWeight: 700 }}>
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={T.live} strokeWidth="2.5" strokeLinecap="round"><path d="M20 6L9 17l-5-5" /></svg>Demande envoyée
-                    </span>
-                  ) : (
-                    <button onClick={onOpenRequest} style={{ flex: 1, height: 48, borderRadius: 13, border: 'none', background: `linear-gradient(135deg, ${T.cyan}, ${T.violet})`, color: '#001018', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, fontFamily: T.display, fontSize: 13, letterSpacing: '0.03em', textTransform: 'uppercase', fontWeight: 700, cursor: 'pointer', boxShadow: `0 12px 30px -14px ${T.cyan}` }}>
-                      Envoyer un duo
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#001018" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
-                    </button>
-                  )}
-                </>
+                  </>
+                ) : isPendingFromMe ? (
+                  <span style={{ flex: 1, height: 48, borderRadius: 13, background: 'rgba(255,255,255,0.06)', border: `1px solid ${T.lineStrong}`, color: T.textDim, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, fontFamily: T.display, fontSize: 13, letterSpacing: '0.03em', textTransform: 'uppercase', fontWeight: 700 }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={T.live} strokeWidth="2.5" strokeLinecap="round"><path d="M20 6L9 17l-5-5" /></svg>Demande envoyée
+                  </span>
+                ) : (
+                  <button onClick={onOpenRequest} style={{ flex: 1, height: 48, borderRadius: 13, border: 'none', background: `linear-gradient(135deg, ${T.cyan}, ${T.violet})`, color: '#001018', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, fontFamily: T.display, fontSize: 13, letterSpacing: '0.03em', textTransform: 'uppercase', fontWeight: 700, cursor: 'pointer', boxShadow: `0 12px 30px -14px ${T.cyan}` }}>
+                    Envoyer un duo
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#001018" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
+                  </button>
+                )
               )}
             </div>
           </div>
@@ -1362,7 +1349,7 @@ export default function DuoFeed({
   const danger = '#ff3d6e'
 
   return (
-    <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
 
       {/* Modal d'envoi de demande */}
       {showModal && selectedItem && (() => {

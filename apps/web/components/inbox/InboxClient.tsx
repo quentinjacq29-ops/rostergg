@@ -304,15 +304,18 @@ function ContextRail({ className, name, initials, hue, rankKey, division, lp, ma
 
 // ── Segmented (port exact de DSegmented desktop/shell.jsx) ──────────────────
 function Segmented({ items, active, onSelect }: {
-  items: { id: string; label: string }[]; active: string; onSelect: (id: string) => void
+  items: { id: string; label: string; badge?: number }[]; active: string; onSelect: (id: string) => void
 }) {
   return (
     <div style={{ display: 'inline-flex', gap: 4, padding: 4, borderRadius: 12, background: 'rgba(255,255,255,0.04)', border: `1px solid ${T.line}` }}>
       {items.map(it => {
         const on = it.id === active
         return (
-          <button key={it.id} onClick={() => onSelect(it.id)} style={{ padding: '9px 18px', borderRadius: 9, border: 'none', cursor: 'pointer', background: on ? `linear-gradient(135deg, ${T.cyan}, ${T.cyan}aa)` : 'transparent', color: on ? '#001018' : T.textDim, fontFamily: T.display, fontSize: 12, letterSpacing: '0.12em', fontWeight: 700, boxShadow: on ? `0 6px 16px -8px ${T.cyan}` : 'none' }}>
+          <button key={it.id} onClick={() => onSelect(it.id)} style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '9px 18px', borderRadius: 9, border: 'none', cursor: 'pointer', background: on ? `linear-gradient(135deg, ${T.cyan}, ${T.cyan}aa)` : 'transparent', color: on ? '#001018' : T.textDim, fontFamily: T.display, fontSize: 12, letterSpacing: '0.12em', fontWeight: 700, boxShadow: on ? `0 6px 16px -8px ${T.cyan}` : 'none' }}>
             {it.label}
+            {it.badge ? (
+              <span style={{ minWidth: 17, height: 17, padding: '0 5px', borderRadius: 9, background: on ? 'rgba(0,16,24,0.28)' : T.queue, color: on ? '#001018' : '#1a1400', fontFamily: T.mono, fontSize: 9.5, fontWeight: 800, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>{it.badge}</span>
+            ) : null}
           </button>
         )
       })}
@@ -565,7 +568,7 @@ export default function InboxClient({
           {/* Onglets (DSegmented) */}
           <div style={{ flexShrink: 0, padding: '16px 16px 10px' }}>
             <Segmented
-              items={[{ id: 'convos', label: 'CONVERSATIONS' }, { id: 'requests', label: 'DEMANDES' }]}
+              items={[{ id: 'convos', label: 'CONVERSATIONS' }, { id: 'requests', label: 'DEMANDES', badge: pendingCount }]}
               active={tab}
               onSelect={id => switchTab(id as 'convos' | 'requests')}
             />
