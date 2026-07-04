@@ -25,24 +25,21 @@ type TestUser = {
   destination: string
 }
 
+// Couleurs de rôle (tokens rgg)
+const ROLE_C: Record<string, string> = { TOP: '#ff6a4d', JNG: '#3ddc97', MID: '#00e0ff' }
+
 // Vrais comptes seedés (email @test.rostergg + Riot ID résolu via Riot).
 const TEST_USERS: TestUser[] = [
-  {
-    initials: 'DU', name: 'Durix', riotId: 'Durix#EUW', email: 'quentin.jacq29@gmail.com',
-    role: 'MID · ton compte', tag: 'MOI', tagColor: T.cyan, tagBg: `${T.cyan}1f`, destination: 'duo',
-  },
-  {
-    initials: 'KZ', name: 'KAYNZ', riotId: 'KAYNZ#EUW', email: 'kaynz@test.rostergg',
-    role: 'JNG · Diamond II', tag: 'TEST', tagColor: T.live, tagBg: `${T.live}1f`, destination: 'duo',
-  },
-  {
-    initials: 'GR', name: 'GRASPR', riotId: 'GRASPR#EUW', email: 'graspr@test.rostergg',
-    role: 'TOP · pool Aatrox/Jax', tag: 'TEST', tagColor: T.violet, tagBg: `${T.violet}1f`, destination: 'duo',
-  },
-  {
-    initials: 'NO', name: 'NOCTURNO', riotId: 'NOCTURNO#EUW', email: 'nocturno@test.rostergg',
-    role: 'JNG · Hecarim/Rammus', tag: 'TEST', tagColor: T.queue, tagBg: `${T.queue}1f`, destination: 'duo',
-  },
+  { initials: 'DU', name: 'Durix',    riotId: 'Durix#EUW',    email: 'quentin.jacq29@gmail.com', role: 'MID · Gold II · ton compte',      tag: 'MOI', tagColor: ROLE_C.MID, tagBg: `${ROLE_C.MID}1f`, destination: 'duo' },
+  { initials: 'GR', name: 'GRASPR',   riotId: 'GRASPR#EUW',   email: 'graspr@test.rostergg',     role: 'TOP · Diamond I · cherche JNG',   tag: 'TOP', tagColor: ROLE_C.TOP, tagBg: `${ROLE_C.TOP}1f`, destination: 'duo' },
+  { initials: 'SH', name: 'SHYVIX',   riotId: 'SHYVIX#EUW',   email: 'shyvix@test.rostergg',     role: 'TOP · Emerald III · cherche MID', tag: 'TOP', tagColor: ROLE_C.TOP, tagBg: `${ROLE_C.TOP}1f`, destination: 'duo' },
+  { initials: 'KZ', name: 'KAYNZ',    riotId: 'KAYNZ#EUW',    email: 'kaynz@test.rostergg',      role: 'JNG · Diamond II · cherche TOP',  tag: 'JNG', tagColor: ROLE_C.JNG, tagBg: `${ROLE_C.JNG}1f`, destination: 'duo' },
+  { initials: 'VX', name: 'VEXORIA',  riotId: 'VEXORIA#EUW',  email: 'vexoria@test.rostergg',    role: 'JNG · Diamond IV',                tag: 'JNG', tagColor: ROLE_C.JNG, tagBg: `${ROLE_C.JNG}1f`, destination: 'duo' },
+  { initials: 'EL', name: 'ELISEGEE', riotId: 'ELISEGEE#EUW', email: 'elisegee@test.rostergg',   role: 'JNG · Diamond III',               tag: 'JNG', tagColor: ROLE_C.JNG, tagBg: `${ROLE_C.JNG}1f`, destination: 'duo' },
+  { initials: 'HE', name: 'HECARIMX', riotId: 'HECARIMX#EUW', email: 'hecarimx@test.rostergg',   role: 'JNG · Emerald I',                 tag: 'JNG', tagColor: ROLE_C.JNG, tagBg: `${ROLE_C.JNG}1f`, destination: 'duo' },
+  { initials: 'LE', name: 'LEEFLOW',  riotId: 'LEEFLOW#EUW',  email: 'leeflow@test.rostergg',    role: 'JNG · Emerald II',                tag: 'JNG', tagColor: ROLE_C.JNG, tagBg: `${ROLE_C.JNG}1f`, destination: 'duo' },
+  { initials: 'NO', name: 'NOCTURNO', riotId: 'NOCTURNO#EUW', email: 'nocturno@test.rostergg',   role: 'JNG · Platinum I',                tag: 'JNG', tagColor: ROLE_C.JNG, tagBg: `${ROLE_C.JNG}1f`, destination: 'duo' },
+  { initials: 'JA', name: 'JARVINJG', riotId: 'JARVINJG#EUW', email: 'jarvinjg@test.rostergg',   role: 'JNG · Gold I',                    tag: 'JNG', tagColor: ROLE_C.JNG, tagBg: `${ROLE_C.JNG}1f`, destination: 'duo' },
 ]
 
 type State = 'idle' | 'loading' | 'success' | 'error'
@@ -160,8 +157,10 @@ export default function UatLoginForm() {
           </p>
 
           {/* Test users */}
-          <div style={{ fontFamily: T.mono, fontSize: 9.5, color: T.textMute, letterSpacing: '0.2em', margin: '18px 0 10px' }}>COMPTES DE TEST</div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <div style={{ fontFamily: T.mono, fontSize: 9.5, color: T.textMute, letterSpacing: '0.2em', margin: '18px 0 10px', display: 'flex', justifyContent: 'space-between' }}>
+            <span>COMPTES DE TEST</span><span style={{ color: T.textMute }}>{TEST_USERS.length}</span>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 320, overflowY: 'auto', paddingRight: 4 }}>
             {TEST_USERS.map(u => (
               <button
                 key={u.name}
