@@ -478,6 +478,8 @@ export default function InboxClient({
   }, [convId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Realtime : notifier l'émetteur quand sa demande est acceptée ──────
+  const sentRef = useRef(sent)
+  useEffect(() => { sentRef.current = sent }, [sent])
   useEffect(() => {
     const ch = supabase
       .channel(`duo-requests:${userId}`)
@@ -487,11 +489,28 @@ export default function InboxClient({
       }, payload => {
         const upd = payload.new as { id: string; status: string; conversation_id: string | null }
         if (upd.status === 'accepted' && upd.conversation_id) {
+          const cId = upd.conversation_id
+          const req = sentRef.current.find(r => r.id === upd.id)
+          setSent(prev => prev.filter(r => r.id !== upd.id))
           setPending(prev => prev.filter(r => r.id !== upd.id))
+          // Ajout optimiste de la conversation (le destinataire qui a accepté)
+          if (req) {
+            const newConv: Conversation = {
+              requestId: req.id, conversationId: cId, matchScore: req.matchScore, unreadCount: 0,
+              other: {
+                id: req.sender.id, displayName: req.sender.displayName, gameName: req.sender.gameName,
+                tagLine: req.sender.tagLine, mainRole: req.sender.mainRole, rankKey: req.sender.rankKey,
+                division: req.sender.division, lp: req.sender.lp, champPool: req.sender.champPool,
+              },
+              lastMessage: req.message ? { body: req.message, sender_id: req.sender.id, created_at: req.createdAt } : null,
+            }
+            setConversations(prev => prev.some(c => c.conversationId === cId) ? prev : [newConv, ...prev])
+          }
           router.refresh()
           setTab('convos')
+          setReqDir('recues')
           setSelectedType('conversation')
-          setSelectedId(upd.conversation_id)
+          setSelectedId(cId)
         }
       })
       .subscribe()
