@@ -704,7 +704,7 @@ export default function InboxClient({
   }
 
   return (
-    <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+    <div className="rgg-inbox-root" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
 
       {/* 3 panneaux desktop ⇆ liste/détail empilés mobile */}
       <div className={`rgg-inbox-3pane rgg-inbox-view-${mobileView}`} style={{ flex: 1, minHeight: 0, display: 'flex', overflow: 'hidden' }}>
@@ -1038,22 +1038,22 @@ function ChatPane({ conv, userId, messages, onlineIds, msgInput, sending, peerTy
         <BackBtn onClick={onBack} />
         <Avatar initials={init} size={44} rank={rk} hue={hue} online={online} />
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-            <span style={{ fontFamily: T.display, fontSize: 19, color: T.text, letterSpacing: '0.03em' }}>{name}</span>
-            <Pill mono accent={rkColor}>{rl}</Pill>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 9, minWidth: 0 }}>
+            <span style={{ fontFamily: T.display, fontSize: 19, color: T.text, letterSpacing: '0.03em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>{name}</span>
+            <span style={{ flexShrink: 0, display: 'inline-flex' }}><Pill mono accent={rkColor}>{rl}</Pill></span>
             {conv.other.mainRole && (
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 7px', borderRadius: 6, background: `${rc}1a`, border: `1px solid ${rc}40` }}>
+              <span style={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 7px', borderRadius: 6, background: `${rc}1a`, border: `1px solid ${rc}40` }}>
                 <RoleIcon role={conv.other.mainRole} size={11} active />
               </span>
             )}
           </div>
           <div style={{ marginTop: 4 }}><StatusDot online={online} /></div>
         </div>
-        {/* Copier le Riot ID */}
+        {/* Copier le Riot ID — icône seule en mobile (label masqué via CSS) */}
         {riotId && (
-          <button onClick={copyRiotId} style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '10px 16px', borderRadius: 11, border: 'none', cursor: 'pointer', background: copied ? `${T.live}1f` : `linear-gradient(135deg, ${T.cyan}, ${T.violet})`, color: copied ? T.live : '#001018', fontFamily: T.display, fontSize: 12, letterSpacing: '0.05em', textTransform: 'uppercase', whiteSpace: 'nowrap', boxShadow: copied ? 'none' : `0 6px 16px -8px ${T.cyan}` }}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 012-2h10"/></svg>
-            {copied ? 'Copié !' : 'Copier le Riot ID'}
+          <button className="rgg-chat-copyid" onClick={copyRiotId} title={`Copier ${riotId}`} style={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 7, padding: '10px 16px', borderRadius: 11, border: 'none', cursor: 'pointer', background: copied ? `${T.live}1f` : `linear-gradient(135deg, ${T.cyan}, ${T.violet})`, color: copied ? T.live : '#001018', fontFamily: T.display, fontSize: 12, letterSpacing: '0.05em', textTransform: 'uppercase', whiteSpace: 'nowrap', boxShadow: copied ? 'none' : `0 6px 16px -8px ${T.cyan}` }}>
+            <svg style={{ flexShrink: 0 }} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 012-2h10"/></svg>
+            <span className="rgg-chat-copyid-label">{copied ? 'Copié !' : 'Copier le Riot ID'}</span>
           </button>
         )}
       </div>

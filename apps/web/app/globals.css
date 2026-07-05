@@ -301,11 +301,18 @@
 .rgg-inbox-detail { flex: 1; min-width: 0; height: 100%; display: flex; }
 .rgg-inbox-back   { display: none; }
 @media (max-width: 859px) {
+  /* Racine : occupe l'espace restant après la topbar (flex:1, pas height:100% qui
+     déborde), et réserve la hauteur de la bottom-nav fixe pour que le composer du
+     chat reste visible au-dessus de la nav (plus de scroll pour l'atteindre). */
+  .rgg-inbox-root { flex: 1 1 auto !important; min-height: 0 !important; height: auto !important; padding-bottom: calc(58px + env(safe-area-inset-bottom)) !important; box-sizing: border-box !important; }
   .rgg-inbox-list { width: 100% !important; border-right: none !important; }
   .rgg-inbox-rail { display: none !important; }
   .rgg-inbox-back { display: inline-flex !important; }
   .rgg-inbox-view-list   .rgg-inbox-detail { display: none !important; }
   .rgg-inbox-view-detail .rgg-inbox-list   { display: none !important; }
+  /* Bouton « Copier le Riot ID » → icône seule en mobile (évite d'écraser le nom) */
+  .rgg-chat-copyid-label { display: none !important; }
+  .rgg-chat-copyid       { padding: 11px !important; gap: 0 !important; }
 }
 
 /* Profil joueur /u/:riotId : desktop ≥860px ⇆ mobile ≤859px */
