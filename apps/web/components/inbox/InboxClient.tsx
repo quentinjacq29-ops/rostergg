@@ -76,11 +76,11 @@ function nameHue(s: string) {
 }
 
 // Construit une PendingRequest depuis la ligne jointe (même forme que la page serveur)
-function buildRequest(d: any): PendingRequest { // eslint-disable-line @typescript-eslint/no-explicit-any
+function buildRequest(d: any): PendingRequest {
   const p = d.sender
   const ra = p?.riot_accounts
   const mp = p?.matching_prefs
-  const solo = (ra?.ranks ?? []).find((r: any) => r.queue === 'RANKED_SOLO_5x5') ?? null // eslint-disable-line @typescript-eslint/no-explicit-any
+  const solo = (ra?.ranks ?? []).find((r: any) => r.queue === 'RANKED_SOLO_5x5') ?? null
   return {
     id: d.id, matchScore: d.match_score, message: d.message, createdAt: d.created_at,
     sender: {
