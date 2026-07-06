@@ -280,7 +280,9 @@
 .rgg-me-body    { padding: 26px 36px 40px; }
 .rgg-me-grid    { display: grid; grid-template-columns: 360px 1fr; gap: 28px; max-width: 1100px; margin: 0 auto; }
 .rgg-me-grid > div { min-width: 0; }
-.rgg-me-preview { position: sticky; top: 0; }
+/* Aperçu sticky : borné à la hauteur visible + scroll interne, sinon le bas de
+   la carte (pool + callout) est coupé et inaccessible quand il dépasse l'écran. */
+.rgg-me-preview { position: sticky; top: 0; max-height: calc(100dvh - 104px); overflow-y: auto; overflow-x: hidden; scrollbar-width: thin; padding-right: 2px; }
 .rgg-me-topbar-wrap { display: contents; } /* DTopBar = enfant direct du flex en desktop */
 @media (max-width: 859px) {
   .rgg-me-topbar      { display: flex; }
