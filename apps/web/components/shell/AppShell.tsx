@@ -3,7 +3,7 @@
 // + bottom nav mobile
 import { Link } from '@/i18n/navigation'
 import { usePathname } from 'next/navigation'
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import DTopBar from '@/components/layout/DTopBar'
@@ -118,6 +118,34 @@ export default function AppShell({
   const pathnameRef = useRef(pathname)
   useEffect(() => { pathnameRef.current = pathname }, [pathname])
 
+  // Re-synchronise le badge depuis la DB (source de vérité). Indispensable sur
+  // mobile : la socket Realtime est suspendue en arrière-plan / coupée par le NAT
+  // mobile, et les events INSERT/UPDATE manqués ne sont jamais rejoués. On rappelle
+  // donc l'état réel au retour au premier plan, au retour réseau, et à chaque
+  // (re)connexion de la socket.
+  const refreshBadge = useCallback(async () => {
+    if (!user?.id) return
+    const supabase = createClient()
+    const { data, error } = await supabase.rpc('inbox_badge', { p_user_id: user.id })
+    if (error || !data) return
+    setPendingBadge(data.pending_requests ?? 0)
+    setMsgBadge(pathnameRef.current.includes('/inbox') ? 0 : (data.unread_conv_count ?? 0))
+  }, [user?.id])
+
+  // Retour au premier plan / réseau rétabli → catch-up (surtout mobile)
+  useEffect(() => {
+    if (!user?.id) return
+    const onVisible = () => { if (document.visibilityState === 'visible') refreshBadge() }
+    document.addEventListener('visibilitychange', onVisible)
+    window.addEventListener('focus', refreshBadge)
+    window.addEventListener('online', refreshBadge)
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible)
+      window.removeEventListener('focus', refreshBadge)
+      window.removeEventListener('online', refreshBadge)
+    }
+  }, [user?.id, refreshBadge])
+
   useEffect(() => {
     if (!user?.id) return
     const supabase = createClient()
@@ -152,9 +180,11 @@ export default function AppShell({
         if (pathnameRef.current.includes('/inbox')) return
         setMsgBadge(n => n + 1)
       })
-      .subscribe()
+      // À chaque (re)connexion réussie de la socket, on re-synchronise depuis la DB
+      // pour rattraper les events manqués pendant une coupure (mobile ++).
+      .subscribe(status => { if (status === 'SUBSCRIBED') refreshBadge() })
     return () => { supabase.removeChannel(channel) }
-  }, [user?.id])
+  }, [user?.id, refreshBadge])
 
   // Mémorise le compte connecté pour le chip "compte récent" sur /login
   useEffect(() => {

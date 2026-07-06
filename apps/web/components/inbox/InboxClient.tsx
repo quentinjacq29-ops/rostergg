@@ -443,6 +443,20 @@ export default function InboxClient({
   // Données fraîches à chaque arrivée sur l'inbox (contourne le Router Cache Next)
   useEffect(() => { router.refresh() }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Catch-up mobile : la socket Realtime est suspendue en arrière-plan / coupée par
+  // le NAT mobile → au retour au premier plan ou réseau rétabli, on refetch tout
+  // (demandes + conversations) pour rattraper ce qui a été manqué.
+  useEffect(() => {
+    const onVisible = () => { if (document.visibilityState === 'visible') router.refresh() }
+    const onOnline  = () => router.refresh()
+    document.addEventListener('visibilitychange', onVisible)
+    window.addEventListener('online', onOnline)
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible)
+      window.removeEventListener('online', onOnline)
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
   // Sélection
   const initialConvId = params.get('conv')
   const [selectedType, setSelectedType] = useState<'request' | 'sentRequest' | 'conversation' | null>(
