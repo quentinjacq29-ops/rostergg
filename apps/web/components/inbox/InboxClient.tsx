@@ -507,10 +507,11 @@ export default function InboxClient({
     return () => { supabase.removeChannel(ch) }
   }, [convId, loadMessages]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Scroll to bottom
+  // Scroll to bottom — inclut peerTyping pour que la vignette « en train d'écrire »
+  // ne reste pas coupée sous le fold quand l'autre commence à taper.
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages])
+  }, [messages, peerTyping])
 
   // ── Mark-read quand on ouvre une conversation ─────────────────────────
   useEffect(() => {
@@ -520,7 +521,12 @@ export default function InboxClient({
       .update({ last_read_at: new Date().toISOString() })
       .eq('conversation_id', convId)
       .eq('profile_id', userId)
-      .then(() => setUnreadCounts(prev => ({ ...prev, [convId]: 0 })))
+      .then(() => {
+        setUnreadCounts(prev => ({ ...prev, [convId]: 0 }))
+        // Prévient l'AppShell pour qu'il re-synchronise le badge global (sinon la
+        // conv lue reste comptée dans la pastille MESSAGES).
+        window.dispatchEvent(new Event('rgg:badge-refresh'))
+      })
   }, [convId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Realtime : notifier l'émetteur quand sa demande est acceptée ──────

@@ -139,10 +139,12 @@ export default function AppShell({
     document.addEventListener('visibilitychange', onVisible)
     window.addEventListener('focus', refreshBadge)
     window.addEventListener('online', refreshBadge)
+    window.addEventListener('rgg:badge-refresh', refreshBadge)
     return () => {
       document.removeEventListener('visibilitychange', onVisible)
       window.removeEventListener('focus', refreshBadge)
       window.removeEventListener('online', refreshBadge)
+      window.removeEventListener('rgg:badge-refresh', refreshBadge)
     }
   }, [user?.id, refreshBadge])
 
@@ -201,9 +203,10 @@ export default function AppShell({
   }, [user?.gameName, user?.rankKey, user?.tagLine])
 
   return (
-    // DesktopShell : flex row, height 100vh, overflow hidden
+    // DesktopShell : flex row, hauteur = viewport visible (dvh → pas de décalage
+    // avec la barre d'URL mobile), overflow hidden
     <div style={{
-      width: '100%', height: '100vh', display: 'flex', overflow: 'hidden',
+      width: '100%', height: '100dvh', display: 'flex', overflow: 'hidden',
       background: T.bg, color: T.text, fontFamily: T.body,
       backgroundImage: `
         radial-gradient(1100px 600px at 18% -10%, ${T.violet}14, transparent 55%),
