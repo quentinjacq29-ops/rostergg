@@ -55,6 +55,8 @@ export type Conversation = {
     rankKey: string | null
     division: string | null
     lp: number | null
+    wins: number | null
+    losses: number | null
     champPool: Record<string, string[]>
   }
   lastMessage: { body: string; sender_id: string; created_at: string } | null
@@ -303,24 +305,35 @@ function Bubble({ m, isMe, otherInitials, otherHue, otherRankKey }: {
 }
 
 // ── ContextRail ───────────────────────────────────────────────────────────
-function ContextRail({ className, name, initials, hue, rankKey, division, lp, matchScore, mainRole, rightRole, champPool, online, pendingLabel }: {
+function ContextRail({ className, name, initials, hue, rankKey, division, lp, wins, losses, matchScore, mainRole, rightRole, champPool, online, pendingLabel, gameName, tagLine }: {
   className?: string
   name: string; initials: string; hue: number; rankKey: string | null; division: string | null; lp: number | null
+  wins: number | null; losses: number | null
   matchScore: number | null
   mainRole: string | null
   rightRole: string | null  // lookingFor (requests) or currentUser mainRole (convs)
   champPool: Record<string, string[]>; online: boolean; pendingLabel?: string
+  gameName: string | null; tagLine: string | null
 }) {
   const rc  = ROLE_META[(mainRole  ?? 'FILL').toUpperCase()]?.c ?? T.textDim
   const rrc = ROLE_META[(rightRole ?? 'FILL').toUpperCase()]?.c ?? T.textDim
   const firstPool = mainRole ? (champPool[mainRole.toUpperCase()] ?? Object.values(champPool)[0] ?? []) : Object.values(champPool)[0] ?? []
+  const rkColor = RANK_COLORS[rankKey ?? 'iron'] ?? '#9aa2bf'
+  const rl      = rankLabel(rankKey, division)
+  const games   = (wins ?? 0) + (losses ?? 0)
+  const winRate = games > 0 ? Math.round(((wins ?? 0) / games) * 100) : null
   return (
     <div className={className} style={{ width: 296, flexShrink: 0, height: '100%', overflowY: 'auto', padding: '22px 20px', borderLeft: `1px solid ${T.line}`, background: 'rgba(255,255,255,0.012)' }}>
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', paddingBottom: 18, borderBottom: `1px solid ${T.line}` }}>
         <Avatar initials={initials} size={72} rank={rankKey ?? 'iron'} hue={hue} online={online} />
         <div style={{ fontFamily: T.display, fontSize: 22, color: T.text, letterSpacing: '0.03em', marginTop: 12 }}>{name}</div>
+        {rankKey && (
+          <span style={{ marginTop: 9, display: 'inline-flex', alignItems: 'center', padding: '4px 13px', borderRadius: 999, background: `${rkColor}14`, border: `1px solid ${rkColor}44`, fontFamily: T.mono, fontSize: 11, fontWeight: 700, color: rkColor, letterSpacing: '0.06em' }}>
+            {rl}{lp != null ? ` · ${lp} LP` : ''}
+          </span>
+        )}
         {pendingLabel && (
-          <div style={{ fontFamily: T.mono, fontSize: 10, color: T.textMute, letterSpacing: '0.1em', marginTop: 5 }}>{pendingLabel}</div>
+          <div style={{ fontFamily: T.mono, fontSize: 10, color: T.textMute, letterSpacing: '0.1em', marginTop: 8 }}>{pendingLabel}</div>
         )}
         {matchScore !== null && (
           <div style={{ marginTop: 12 }}>
@@ -344,6 +357,20 @@ function ContextRail({ className, name, initials, hue, rankKey, division, lp, ma
             </div>
           </ContextCard>
         )}
+        {winRate !== null && (
+          <ContextCard label="RANKED SOLO">
+            <div style={{ display: 'flex', gap: 8 }}>
+              <div style={{ flex: 1, padding: '10px 8px', borderRadius: 10, background: 'rgba(255,255,255,0.03)', border: `1px solid ${T.line}`, textAlign: 'center' }}>
+                <div style={{ fontFamily: T.mono, fontSize: 8.5, color: T.textMute, letterSpacing: '0.12em' }}>WIN RATE</div>
+                <div style={{ fontFamily: T.display, fontSize: 18, color: T.live, marginTop: 3 }}>{winRate}%</div>
+              </div>
+              <div style={{ flex: 1, padding: '10px 8px', borderRadius: 10, background: 'rgba(255,255,255,0.03)', border: `1px solid ${T.line}`, textAlign: 'center' }}>
+                <div style={{ fontFamily: T.mono, fontSize: 8.5, color: T.textMute, letterSpacing: '0.12em' }}>GAMES</div>
+                <div style={{ fontFamily: T.display, fontSize: 18, color: T.text, marginTop: 3 }}>{games}</div>
+              </div>
+            </div>
+          </ContextCard>
+        )}
         {firstPool.length > 0 && (
           <ContextCard label="TOP CHAMPIONS">
             <div style={{ display: 'flex', gap: 8 }}>
@@ -356,6 +383,12 @@ function ContextRail({ className, name, initials, hue, rankKey, division, lp, ma
           </ContextCard>
         )}
         <StatusDot online={online} />
+        {gameName && tagLine && (
+          <Link href={`/u/${gameName}/${tagLine}`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, marginTop: 16, padding: '11px 14px', borderRadius: 11, background: 'rgba(255,255,255,0.04)', border: `1px solid ${T.lineStrong}`, color: T.text, textDecoration: 'none', fontFamily: T.display, fontSize: 12, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+            Voir le profil complet
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+          </Link>
+        )}
       </div>
     </div>
   )
@@ -552,7 +585,7 @@ export default function InboxClient({
               other: {
                 id: req.sender.id, displayName: req.sender.displayName, gameName: req.sender.gameName,
                 tagLine: req.sender.tagLine, mainRole: req.sender.mainRole, rankKey: req.sender.rankKey,
-                division: req.sender.division, lp: req.sender.lp, champPool: req.sender.champPool,
+                division: req.sender.division, lp: req.sender.lp, wins: req.sender.wins, losses: req.sender.losses, champPool: req.sender.champPool,
               },
               lastMessage: req.message ? { body: req.message, sender_id: req.sender.id, created_at: req.createdAt } : null,
             }
@@ -660,7 +693,7 @@ export default function InboxClient({
             other: {
               id: req.sender.id, displayName: req.sender.displayName, gameName: req.sender.gameName,
               tagLine: req.sender.tagLine, mainRole: req.sender.mainRole, rankKey: req.sender.rankKey,
-              division: req.sender.division, lp: req.sender.lp, champPool: req.sender.champPool,
+              division: req.sender.division, lp: req.sender.lp, wins: req.sender.wins, losses: req.sender.losses, champPool: req.sender.champPool,
             },
             lastMessage: req.message ? { body: req.message, sender_id: req.sender.id, created_at: req.createdAt } : null,
           }
@@ -846,6 +879,10 @@ export default function InboxClient({
               mainRole={selectedRequest.sender.mainRole}
               rightRole={selectedRequest.sender.lookingFor}
               champPool={selectedRequest.sender.champPool}
+              wins={selectedRequest.sender.wins}
+              losses={selectedRequest.sender.losses}
+              gameName={null}
+              tagLine={null}
               online={onlineIds.has(selectedRequest.sender.id)}
               pendingLabel="RIOT ID MASQUÉ · DEMANDE EN ATTENTE"
             />
@@ -862,6 +899,10 @@ export default function InboxClient({
               mainRole={selectedSent.sender.mainRole}
               rightRole={selectedSent.sender.lookingFor}
               champPool={selectedSent.sender.champPool}
+              wins={selectedSent.sender.wins}
+              losses={selectedSent.sender.losses}
+              gameName={null}
+              tagLine={null}
               online={onlineIds.has(selectedSent.sender.id)}
               pendingLabel="RIOT ID MASQUÉ · DEMANDE EN ATTENTE"
             />
@@ -878,6 +919,10 @@ export default function InboxClient({
               mainRole={selectedConv.other.mainRole}
               rightRole={currentUserRole}
               champPool={selectedConv.other.champPool}
+              wins={selectedConv.other.wins}
+              losses={selectedConv.other.losses}
+              gameName={selectedConv.other.gameName}
+              tagLine={selectedConv.other.tagLine}
               online={onlineIds.has(selectedConv.other.id)}
             />
           ) : null}
