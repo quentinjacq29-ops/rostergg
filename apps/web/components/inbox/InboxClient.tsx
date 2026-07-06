@@ -1053,21 +1053,22 @@ function ChatPane({ conv, userId, messages, onlineIds, msgInput, sending, peerTy
 
   return (
     <div style={{ flex: 1, minWidth: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
-      {/* Thread header */}
-      <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 14, padding: '16px 24px', borderBottom: `1px solid ${T.line}`, background: 'rgba(10,12,20,0.5)' }}>
+      {/* Thread header — compact façon messagerie : vignette réduite (statut = point
+          de la vignette, pas de texte « en ligne »), nom seul sur sa ligne (toute la
+          largeur → plus de troncature), rang + rôle en sous-titre. */}
+      <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 11, padding: '11px 18px', borderBottom: `1px solid ${T.line}`, background: 'rgba(10,12,20,0.5)' }}>
         <BackBtn onClick={onBack} />
-        <Avatar initials={init} size={44} rank={rk} hue={hue} online={online} />
+        <Avatar initials={init} size={36} rank={rk} hue={hue} online={online} />
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 9, minWidth: 0 }}>
-            <span style={{ fontFamily: T.display, fontSize: 19, color: T.text, letterSpacing: '0.03em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>{name}</span>
+          <div style={{ fontFamily: T.display, fontSize: 16, color: T.text, letterSpacing: '0.02em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 3, minWidth: 0 }}>
             <span style={{ flexShrink: 0, display: 'inline-flex' }}><Pill mono accent={rkColor}>{rl}</Pill></span>
             {conv.other.mainRole && (
-              <span style={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 7px', borderRadius: 6, background: `${rc}1a`, border: `1px solid ${rc}40` }}>
-                <RoleIcon role={conv.other.mainRole} size={11} active />
+              <span style={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 6px', borderRadius: 6, background: `${rc}1a`, border: `1px solid ${rc}40` }}>
+                <RoleIcon role={conv.other.mainRole} size={10} active />
               </span>
             )}
           </div>
-          <div style={{ marginTop: 4 }}><StatusDot online={online} /></div>
         </div>
         {/* Copier le Riot ID — icône seule en mobile (label masqué via CSS) */}
         {riotId && (
