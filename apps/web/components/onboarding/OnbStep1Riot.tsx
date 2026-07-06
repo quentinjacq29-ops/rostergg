@@ -54,6 +54,17 @@ export default function OnbStep1Riot({ locale, step }: Props) {
 
   const router = useRouter()
 
+  // Auto-scroll vers le résultat (carte compte) ou l'erreur dès son apparition —
+  // sur mobile il est sinon sous le fold et l'utilisateur doit scroller.
+  const resultRef = useRef<HTMLDivElement>(null)
+  const errorRef  = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const el = verified ? resultRef.current : error ? errorRef.current : null
+    if (!el) return
+    const t = setTimeout(() => el.scrollIntoView({ behavior: 'smooth', block: 'center' }), 90)
+    return () => clearTimeout(t)
+  }, [verified, error])
+
   // Fetch suggestion initiale dès qu'un compte est vérifié
   useEffect(() => {
     if (!verified) return
@@ -264,7 +275,7 @@ export default function OnbStep1Riot({ locale, step }: Props) {
           </div>
 
           {error && (
-            <div style={{ marginTop: 14, padding: '12px 16px', borderRadius: 12, background: 'rgba(255,61,110,0.08)', border: '1px solid rgba(255,61,110,0.25)', fontFamily: 'var(--font-body)', fontSize: 13, color: 'var(--rose)' }}>
+            <div ref={errorRef} style={{ marginTop: 14, padding: '12px 16px', borderRadius: 12, background: 'rgba(255,61,110,0.08)', border: '1px solid rgba(255,61,110,0.25)', fontFamily: 'var(--font-body)', fontSize: 13, color: 'var(--rose)' }}>
               {error}
             </div>
           )}
@@ -273,44 +284,47 @@ export default function OnbStep1Riot({ locale, step }: Props) {
 
       {/* ── Carte compte Riot lié (PRIVÉE) — apparaît après vérification ── */}
       {verified && (
-        <div style={{ marginTop: 22, borderRadius: 16, padding: 20, background: 'linear-gradient(135deg, rgba(0,255,157,0.06), transparent)', border: '1px solid rgba(0,255,157,0.23)' }}>
-          {/* Header */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
-            <span className="rgg-pulse" style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--live)', display: 'inline-block' }} />
-            <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--live)', letterSpacing: '0.16em' }}>
+        <div ref={resultRef} style={{ marginTop: 22, borderRadius: 16, padding: 20, background: 'linear-gradient(135deg, rgba(0,255,157,0.06), transparent)', border: '1px solid rgba(0,255,157,0.23)', scrollMarginTop: 16 }}>
+          {/* Header — flexWrap : le badge PRIVÉ passe proprement à la ligne sur mobile au lieu de casser en plein mot */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, rowGap: 8, flexWrap: 'wrap', marginBottom: 14 }}>
+            <span className="rgg-pulse" style={{ width: 8, height: 8, borderRadius: '50%', flexShrink: 0, background: 'var(--live)', display: 'inline-block' }} />
+            <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--live)', letterSpacing: '0.16em', whiteSpace: 'nowrap' }}>
               {mode === 'rso' ? 'APERÇU · IMPORTÉ APRÈS CONNEXION' : 'COMPTE LIÉ · VÉRIFIÉ'}
             </span>
             {/* Badge PRIVÉ */}
-            <span style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 9px', borderRadius: 999, background: 'rgba(255,255,255,0.05)', border: '1px solid var(--line)' }}>
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--text-dim)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0110 0v4" /></svg>
-              <span style={{ fontFamily: 'var(--font-mono)', fontSize: 8.5, color: 'var(--text-dim)', letterSpacing: '0.1em' }}>PRIVÉ · VISIBLE DE TOI SEUL</span>
+            <span style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 9px', borderRadius: 999, background: 'rgba(255,255,255,0.05)', border: '1px solid var(--line)', flexShrink: 0 }}>
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--text-dim)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0110 0v4" /></svg>
+              <span style={{ fontFamily: 'var(--font-mono)', fontSize: 8.5, color: 'var(--text-dim)', letterSpacing: '0.1em', whiteSpace: 'nowrap' }}>PRIVÉ · VISIBLE DE TOI SEUL</span>
             </span>
           </div>
 
-          {/* Compte */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-            <div style={{ width: 58, height: 58, borderRadius: '50%', flexShrink: 0, background: 'linear-gradient(135deg, var(--surface), var(--elevated))', border: '2px solid var(--live)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font-display)', fontSize: 20, color: 'var(--live)', boxShadow: '0 0 0 3px var(--bg), 0 0 14px rgba(0,255,157,0.3)' }}>
-              {verified.gameName.slice(0, 2).toUpperCase()}
-            </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontFamily: 'var(--font-display)', fontSize: 20, color: 'var(--text)', letterSpacing: '0.02em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {verified.gameName.toUpperCase()} <span style={{ color: 'var(--text-dim)', fontSize: 13 }}>#{verified.tagLine.toUpperCase()}</span>
+          {/* Compte — flexWrap : sur mobile les champions passent sous le bloc pseudo/rang
+              au lieu d'écraser le nom (qui se tronquait en « DU… »). */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16, rowGap: 14, flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 16, flex: '1 1 220px', minWidth: 0 }}>
+              <div style={{ width: 58, height: 58, borderRadius: '50%', flexShrink: 0, background: 'linear-gradient(135deg, var(--surface), var(--elevated))', border: '2px solid var(--live)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font-display)', fontSize: 20, color: 'var(--live)', boxShadow: '0 0 0 3px var(--bg), 0 0 14px rgba(0,255,157,0.3)' }}>
+                {verified.gameName.slice(0, 2).toUpperCase()}
               </div>
-              <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
-                {verified.tier && (
-                  <span style={{ display: 'inline-flex', alignItems: 'center', padding: '4px 10px', borderRadius: 999, background: 'rgba(0,255,157,0.1)', border: '1px solid rgba(0,255,157,0.2)', fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 600, color: TIER_COLORS_HEX[verified.tier] ?? 'var(--live)', letterSpacing: '0.08em' }}>
-                    {verified.tier} {verified.rank} · {verified.lp ?? 0} LP
-                  </span>
-                )}
-                {verified.level && (
-                  <span style={{ display: 'inline-flex', alignItems: 'center', padding: '4px 10px', borderRadius: 999, background: 'rgba(255,255,255,0.04)', border: '1px solid var(--line)', fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text-dim)', letterSpacing: '0.08em' }}>
-                    LVL {verified.level}
-                  </span>
-                )}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontFamily: 'var(--font-display)', fontSize: 20, color: 'var(--text)', letterSpacing: '0.02em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {verified.gameName.toUpperCase()} <span style={{ color: 'var(--text-dim)', fontSize: 13 }}>#{verified.tagLine.toUpperCase()}</span>
+                </div>
+                <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
+                  {verified.tier && (
+                    <span style={{ display: 'inline-flex', alignItems: 'center', padding: '4px 10px', borderRadius: 999, background: 'rgba(0,255,157,0.1)', border: '1px solid rgba(0,255,157,0.2)', fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 600, color: TIER_COLORS_HEX[verified.tier] ?? 'var(--live)', letterSpacing: '0.08em', whiteSpace: 'nowrap' }}>
+                      {verified.tier} {verified.rank} · {verified.lp ?? 0} LP
+                    </span>
+                  )}
+                  {verified.level && (
+                    <span style={{ display: 'inline-flex', alignItems: 'center', padding: '4px 10px', borderRadius: 999, background: 'rgba(255,255,255,0.04)', border: '1px solid var(--line)', fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text-dim)', letterSpacing: '0.08em', whiteSpace: 'nowrap' }}>
+                      LVL {verified.level}
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
             {verified.topChamps && verified.topChamps.length > 0 && (
-              <div style={{ display: 'flex', gap: 6 }}>
+              <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
                 {verified.topChamps.slice(0, 3).map((id, i) => (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img key={id} src={`/api/champions/icon/${id}`} alt={id} width={44} height={44} style={{ width: 44, height: 44, borderRadius: 8, border: `1.5px solid ${i === 0 ? 'var(--cyan)' : 'rgba(255,255,255,0.1)'}`, objectFit: 'cover' }} />
