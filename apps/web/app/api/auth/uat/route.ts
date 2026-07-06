@@ -10,13 +10,11 @@ import {
 } from '@/lib/riot/client'
 
 // ── Guard ─────────────────────────────────────────────────────────────────────
-// Strictement réservé aux environnements de test.
-// En prod (NODE_ENV=production), cette route est désactivée quelle que soit la variable.
+// Réservé aux tests. Piloté par ENABLE_UAT_LOGIN (backdoor bêta), protégé en plus
+// par le Basic Auth du middleware sur les déploiements Vercel.
+// ⚠️ Mettre ENABLE_UAT_LOGIN=false (ou retirer la var) avant lancement public.
 function isEnabled() {
-  return (
-    process.env.ENABLE_UAT_LOGIN === 'true' &&
-    process.env.NODE_ENV !== 'production'
-  )
+  return process.env.ENABLE_UAT_LOGIN === 'true'
 }
 
 // Admin Supabase — service role uniquement côté serveur
