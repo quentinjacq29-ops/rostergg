@@ -70,6 +70,9 @@ export function ProfileMobileCTA({ target, authed }: { target: DuoRequestTarget 
   const [showModal, setShowModal] = useState(false)
   const [me, setMe] = useState<DuoRequestMe | null>(null)
   const [status, setStatus] = useState<'none' | 'pending' | 'accepted'>('none')
+  const [reqId, setReqId] = useState<string | null>(null)
+  const [incoming, setIncoming] = useState(false)   // la demande vient de LUI (je suis destinataire)
+  const [responding, setResponding] = useState(false)
 
   useEffect(() => {
     if (!authed) return
@@ -79,7 +82,7 @@ export function ProfileMobileCTA({ target, authed }: { target: DuoRequestTarget 
       if (!user) return
       const [{ data: profile }, { data: req }] = await Promise.all([
         supabase.from('profiles').select('display_name, riot_accounts(game_name, ranks(tier, division, league_points, queue)), matching_prefs(main_roles)').eq('id', user.id).maybeSingle(),
-        supabase.from('duo_requests').select('status').or(`and(from_profile.eq.${user.id},to_profile.eq.${target.profileId}),and(from_profile.eq.${target.profileId},to_profile.eq.${user.id})`).in('status', ['pending', 'accepted']).maybeSingle(),
+        supabase.from('duo_requests').select('id, from_profile, to_profile, status').or(`and(from_profile.eq.${user.id},to_profile.eq.${target.profileId}),and(from_profile.eq.${target.profileId},to_profile.eq.${user.id})`).in('status', ['pending', 'accepted']).maybeSingle(),
       ])
       if (profile) {
         const ra = (profile as any).riot_accounts
@@ -87,14 +90,30 @@ export function ProfileMobileCTA({ target, authed }: { target: DuoRequestTarget 
         const solo = (ra?.ranks ?? []).find((r: any) => r.queue === 'RANKED_SOLO_5x5') ?? null
         setMe({ name: ra?.game_name ?? (profile as any).display_name ?? 'MOI', role: mp?.main_roles?.[0] ?? null, rank: solo?.tier?.toLowerCase() ?? null, tier: solo?.division ?? null, lp: solo?.league_points ?? null })
       }
-      if (req) setStatus(req.status as 'pending' | 'accepted')
+      if (req) {
+        setStatus(req.status as 'pending' | 'accepted')
+        setReqId((req as any).id)
+        setIncoming((req as any).to_profile === user.id)
+      }
     })()
   }, [authed, target.profileId])
 
   async function handleConfirm(message: string) {
     const res = await fetch('/api/duo/request', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ to_profile: target.profileId, match_score: target.match, message }) })
-    if (res.ok) { setStatus('pending'); setShowModal(false) }
+    if (res.ok) { setStatus('pending'); setIncoming(false); setShowModal(false) }
     else { const d = await res.json().catch(() => ({})); throw new Error(d.error ?? 'Erreur envoi') }
+  }
+
+  // Répondre à une demande REÇUE depuis la page profil (accepter / refuser)
+  async function respond(action: 'accept' | 'decline') {
+    if (!reqId || responding) return
+    setResponding(true)
+    const res = await fetch('/api/duo/respond', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ request_id: reqId, action }) })
+    setResponding(false)
+    if (!res.ok) return
+    if (action === 'accept') setStatus('accepted')
+    else { setStatus('none'); setReqId(null); setIncoming(false) }
+    router.refresh()
   }
 
   // Login-wall : invité → connexion / inscription
@@ -107,6 +126,19 @@ export function ProfileMobileCTA({ target, authed }: { target: DuoRequestTarget 
   return (
     <div className="rgg-pp-mobile-cta" style={{ position: 'fixed', left: '50%', transform: 'translateX(-50%)', bottom: 0, width: '100%', maxWidth: 430, zIndex: 60, background: 'rgba(8,10,16,0.95)', backdropFilter: 'blur(16px)', borderTop: `1px solid ${T.lineStrong}`, padding: '12px 16px calc(12px + env(safe-area-inset-bottom))' }}>
       <div style={{ display: 'flex', gap: 10 }}>
+        {pending && incoming ? (
+          // Demande REÇUE → Refuser / Accepter
+          <>
+            <button onClick={() => respond('decline')} disabled={responding} style={{ flex: 1, height: 50, borderRadius: 13, background: 'rgba(255,255,255,0.05)', border: `1px solid ${T.lineStrong}`, color: T.textDim, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 7, cursor: responding ? 'default' : 'pointer', fontFamily: T.display, fontSize: 13, letterSpacing: '0.08em', textTransform: 'uppercase', opacity: responding ? 0.6 : 1 }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12" /></svg>
+              Refuser
+            </button>
+            <button onClick={() => respond('accept')} disabled={responding} style={{ flex: 1.6, height: 50, borderRadius: 13, border: 'none', cursor: responding ? 'default' : 'pointer', background: `linear-gradient(135deg, ${T.live}, ${T.cyan})`, color: '#001018', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, fontFamily: T.display, fontSize: 14, letterSpacing: '0.07em', textTransform: 'uppercase', fontWeight: 700, opacity: responding ? 0.6 : 1 }}>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#001018" strokeWidth="2.8" strokeLinecap="round"><path d="M20 6L9 17l-5-5" /></svg>Accepter
+            </button>
+          </>
+        ) : (
+        <>
         <button onClick={onMsg} style={{ flex: 1, height: 50, borderRadius: 13, background: 'rgba(255,255,255,0.05)', border: `1px solid ${T.lineStrong}`, color: T.text, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 7, cursor: 'pointer', fontFamily: T.display, fontSize: 13, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a8 8 0 01-11.5 7.2L4 21l1.8-5.5A8 8 0 1121 12z" /></svg>
           Message
@@ -124,10 +156,12 @@ export function ProfileMobileCTA({ target, authed }: { target: DuoRequestTarget 
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#001018" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 6l6 6-6 6" /></svg>Envoyer un duo
           </button>
         )}
+        </>
+        )}
       </div>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 9, fontFamily: T.mono, fontSize: 9, color: T.textMute, letterSpacing: '0.06em' }}>
         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0110 0v4" /></svg>
-        {authed ? 'Chat débloqué après acceptation de la demande' : 'Connecte-toi pour contacter ce joueur'}
+        {!authed ? 'Connecte-toi pour contacter ce joueur' : (pending && incoming) ? 'Ce joueur t’a envoyé une demande · accepte pour débloquer le chat' : 'Chat débloqué après acceptation de la demande'}
       </div>
 
       {showModal && me && (
