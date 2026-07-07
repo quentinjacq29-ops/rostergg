@@ -208,7 +208,7 @@ function RolePoolEditor({ role, label, pool, onToggle, onPromote }: {
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={rc} strokeWidth="2.6" strokeLinecap="round">
           <path d={open ? 'M5 12h14' : 'M12 5v14M5 12h14'} />
         </svg>
-        {open ? 'FERMER' : 'AJOUTER UN CHAMPION'}
+        {open ? 'Fermer' : 'Ajouter / modifier'}
       </button>
 
       {open && (
