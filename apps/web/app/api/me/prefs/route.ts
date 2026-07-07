@@ -18,6 +18,7 @@ export async function PATCH(req: Request) {
     rank_ceiling,
     regions,
     availability,
+    duo_search_active,
   } = body
 
   // ── Bio → profiles
@@ -35,6 +36,7 @@ export async function PATCH(req: Request) {
   if (rank_floor        !== undefined) prefsUpdate.rank_floor          = rank_floor
   if (rank_ceiling      !== undefined) prefsUpdate.rank_ceiling        = rank_ceiling
   if (regions           !== undefined) prefsUpdate.regions             = regions
+  if (duo_search_active !== undefined) prefsUpdate.duo_search_active    = duo_search_active
 
   if (Object.keys(prefsUpdate).length > 1) {
     await supabase.from('matching_prefs').upsert(prefsUpdate, { onConflict: 'profile_id' })

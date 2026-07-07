@@ -43,6 +43,7 @@ export type MeClientProps = {
   playstyles: string[]
   languages: string[]
   voiceRequired: boolean
+  duoSearchActive: boolean
   availability: AvailSlot[]
   champPool: Record<string, string[]>
   lastSyncedAt: string | null
@@ -100,12 +101,58 @@ function RolePick({ role, active, onClick }: { role: string; active: boolean; on
   )
 }
 
-function Toggle({ on, onClick }: { on: boolean; onClick: () => void }) {
+function Toggle({ on, onClick, accent = T.cyan }: { on: boolean; onClick: () => void; accent?: string }) {
   return (
-    <span onClick={onClick} style={{ width: 44, height: 26, borderRadius: 999, padding: 3, background: on ? T.cyan : 'rgba(255,255,255,0.1)', display: 'inline-flex', alignItems: 'center', cursor: 'pointer', transition: 'background .15s', boxShadow: on ? `0 0 12px ${T.cyan}66` : 'none', flexShrink: 0 }}>
+    <span onClick={onClick} style={{ width: 44, height: 26, borderRadius: 999, padding: 3, background: on ? accent : 'rgba(255,255,255,0.1)', display: 'inline-flex', alignItems: 'center', cursor: 'pointer', transition: 'background .15s', boxShadow: on ? `0 0 12px ${accent}66` : 'none', flexShrink: 0 }}>
       <span style={{ width: 20, height: 20, borderRadius: '50%', background: on ? '#001018' : T.textDim, marginLeft: on ? 18 : 0, transition: 'margin .15s' }} />
     </span>
   )
+}
+
+// ── Carte de recherche (MES RECHERCHES) — duo (câblée) / équipe (statique) ─────
+function SearchCard({ accent, icon, title, statusOn, statusOff, chips, on, onToggle, editLabel, onEdit }: {
+  accent: string
+  icon: React.ReactNode
+  title: string
+  statusOn: string
+  statusOff: string
+  chips: [string, string?][]
+  on: boolean
+  onToggle: () => void
+  editLabel: string
+  onEdit?: () => void
+}) {
+  return (
+    <div style={{ borderRadius: 14, border: `1px solid ${on ? accent + '66' : T.line}`, padding: 15, marginBottom: 10, opacity: on ? 1 : 0.75, background: on ? `linear-gradient(135deg, ${accent}14, transparent 70%)` : 'rgba(255,255,255,0.025)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
+        <span style={{ width: 34, height: 34, borderRadius: 10, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: accent, background: `${accent}24`, border: `1px solid ${accent}55` }}>{icon}</span>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontFamily: T.display, fontSize: 14.5, color: T.text, letterSpacing: '0.05em' }}>{title}</div>
+          <div style={{ fontFamily: T.mono, fontSize: 8.5, letterSpacing: '0.1em', marginTop: 3, color: on ? T.live : T.textMute }}>{on ? statusOn : statusOff}</div>
+        </div>
+        <Toggle on={on} accent={accent} onClick={onToggle} />
+      </div>
+      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 11 }}>
+        {chips.map(([txt, c]) => (
+          <span key={txt} style={{ fontFamily: T.mono, fontSize: 9.5, fontWeight: 600, letterSpacing: '0.04em', padding: '5px 10px', borderRadius: 999, background: c ? `${c}1c` : 'rgba(255,255,255,0.05)', border: `1px solid ${c ? c + '55' : T.line}`, color: c || T.textDim }}>{txt}</span>
+        ))}
+      </div>
+      <span onClick={onEdit} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: 12, fontFamily: T.mono, fontSize: 9.5, letterSpacing: '0.08em', color: accent, cursor: onEdit ? 'pointer' : 'default', textTransform: 'uppercase' }}>
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.8 2.8 0 114 4L7.5 20.5 2 22l1.5-5.5z" /></svg>{editLabel}
+      </span>
+    </div>
+  )
+}
+
+// Résumé du créneau dominant à partir de la grille de dispo (pour la chip récap)
+function availSummary(grid: number[][]): string {
+  let min = -1, max = -1
+  for (let s = 0; s < SLOTS.length; s++) {
+    if (grid.some(col => (col[s] ?? 0) > 0)) { if (min === -1) min = s; max = s }
+  }
+  if (min === -1) return 'FLEX'
+  const L = (i: number) => SLOTS[i].toUpperCase()
+  return min === max ? L(min) : `${L(min)}–${L(max)}`
 }
 
 // ── Éditeur champion pool pour un rôle ───────────────────────────────────────
@@ -319,6 +366,8 @@ export default function MeClient(props: MeClientProps) {
   const [styles,    setStyles]    = useState<string[]>(props.playstyles)
   const [langs,     setLangs]     = useState<string[]>(props.languages)
   const [voice,     setVoice]     = useState(props.voiceRequired)
+  const [duoSearch, setDuoSearch] = useState(props.duoSearchActive)  // recherche duo : actif/pause (branché)
+  const [teamSearch, setTeamSearch] = useState(true)                 // recherche équipe : statique (chantier Teams)
   const [avGrid,    setAvGrid]    = useState<number[][]>(() => slotsToGrid(props.availability))
   const [pools,     setPools]     = useState<Record<string, string[]>>(props.champPool)
   const [saved,     setSaved]     = useState(false)
@@ -326,6 +375,7 @@ export default function MeClient(props: MeClientProps) {
 
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const poolTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const rolesRef  = useRef<HTMLDivElement>(null)   // cible du « Modifier ma recherche duo »
 
   const rkColor  = RANK_COLORS[props.rankKey ?? 'iron'] ?? T.textDim
   const initials = (props.gameName ?? props.displayName ?? '?').slice(0, 2).toUpperCase()
@@ -416,6 +466,11 @@ export default function MeClient(props: MeClientProps) {
     const next = !voice
     setVoice(next)
     saveNow({ voice_required: next })
+  }
+  function updDuoSearch() {
+    const next = !duoSearch
+    setDuoSearch(next)
+    saveNow({ duo_search_active: next })  // pause = invisible dans le feed duo
   }
   function updAvail(weekday: number, slot: number, val: number) {
     setAvGrid(prev => {
@@ -587,6 +642,47 @@ export default function MeClient(props: MeClientProps) {
           {/* ── Colonne droite : formulaire ──────────────────────────── */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
 
+            {/* MES RECHERCHES — duo (branché) + équipe (statique, chantier Teams) */}
+            <EditCard label="MES RECHERCHES" accent={T.cyan} hint="ACTIVES EN PARALLÈLE">
+              <SearchCard
+                accent={T.cyan}
+                icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M7 12l-3 3 3 3M17 12l3 3-3 3M14 4l-4 16" /></svg>}
+                title="RECHERCHE DUO"
+                statusOn="ACTIVE · VISIBLE DANS LE FEED DUO"
+                statusOff="EN PAUSE · INVISIBLE DANS LES RECHERCHES"
+                chips={[
+                  [`CHERCHE ${looking[0] ?? 'FLEX'}`, T.cyan],
+                  [props.rankKey ? `${props.rankKey.slice(0, 3).toUpperCase()} ±1 TIER` : 'TOUS ELOS'],
+                  [voice ? 'VOCAL' : 'SANS VOCAL'],
+                  [availSummary(avGrid)],
+                ]}
+                on={duoSearch}
+                onToggle={updDuoSearch}
+                editLabel="Modifier ma recherche duo"
+                onEdit={() => rolesRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+              />
+              <SearchCard
+                accent={T.violet}
+                icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" /></svg>}
+                title="RECHERCHE ÉQUIPE"
+                statusOn="ACTIVE · RECRUTABLE PAR LES CAPITAINES"
+                statusOff="EN PAUSE · INVISIBLE DANS LES RECHERCHES"
+                chips={[
+                  [`${main ?? 'MID'} (MAIN)`, T.violet],
+                  ['CLASH + SCRIMS'],
+                  ['2–3 SOIRS/SEM'],
+                  ['OBJECTIF COMPÉT'],
+                ]}
+                on={teamSearch}
+                onToggle={() => setTeamSearch(v => !v)}
+                editLabel="Bientôt · chantier équipes"
+              />
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={T.textMute} strokeWidth="2" strokeLinecap="round" style={{ flexShrink: 0 }}><circle cx="12" cy="12" r="10" /><path d="M12 16v-4M12 8h.01" /></svg>
+                <span style={{ fontFamily: T.body, fontSize: 12, color: T.textMute, lineHeight: 1.4 }}>Le socle (Riot, rôles, pool, langues, dispos) est <b style={{ color: T.textDim }}>partagé</b> — chaque recherche ajoute ses préférences et se met en pause indépendamment.</span>
+              </div>
+            </EditCard>
+
             {/* Compte Riot */}
             <EditCard label="COMPTE RIOT" accent={T.live}>
               {props.gameName ? (
@@ -632,6 +728,7 @@ export default function MeClient(props: MeClientProps) {
             </EditCard>
 
             {/* Rôles */}
+            <div ref={rolesRef} style={{ scrollMarginTop: 12 }}>
             <EditCard label="RÔLES" accent={T.cyan}>
               <FieldLabel hint="LE 1ER = PRINCIPAL">JE JOUE</FieldLabel>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 10 }}>
@@ -643,6 +740,7 @@ export default function MeClient(props: MeClientProps) {
                 {ALL_ROLES.map(r => <RolePick key={r} role={r} active={looking.includes(r)} onClick={() => updLooking(r)} />)}
               </div>
             </EditCard>
+            </div>
 
             {/* Champion pool par rôle */}
             <EditCard label="CHAMPION POOL · PAR RÔLE" accent={T.cyan} hint="SYNCHRONISÉ DEPUIS RIOT · ÉDITABLE">
