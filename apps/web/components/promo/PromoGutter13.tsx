@@ -70,6 +70,33 @@ function AdHalfPage13() {
   )
 }
 
+// ── Pavé gouttière : scale-to-fit (ratio 1:2 verrouillé) pour tenir sur 13" ────
+// Le 300×600 fait 600px de haut ; sur un écran court il ne rentre pas. On le met
+// à l'échelle pour qu'il tienne dans la hauteur dispo, en gardant son ratio exact.
+function GutterAd() {
+  const ref = useRef<HTMLDivElement>(null)
+  const [scale, setScale] = useState(1)
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const compute = () => {
+      const s = Math.min(1, el.clientHeight / 600, el.clientWidth / 300)
+      setScale(s > 0 ? s : 1)
+    }
+    compute()
+    const ro = new ResizeObserver(compute)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
+  return (
+    <div ref={ref} style={{ flex: 1, minHeight: 0, width: '100%', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', overflow: 'hidden' }}>
+      <div style={{ transform: `scale(${scale})`, transformOrigin: 'top center', flexShrink: 0 }}>
+        <AdHalfPage13 />
+      </div>
+    </div>
+  )
+}
+
 // ── Well : mesure la largeur dispo et met l'app à l'échelle (scale = w/1440) ──
 function PromoFrame({ children }: { children: ReactNode }) {
   const ref = useRef<HTMLDivElement>(null)
@@ -112,12 +139,12 @@ export default function PromoGutter13({ appSlot }: { appSlot: ReactNode }) {
         <PromoFrame>{appSlot}</PromoFrame>
         {/* GOUTTIÈRE droite — boîte neutre, juste le placeholder 300×600 */}
         <div style={{
-          width: GUTTER, flexShrink: 0, position: 'relative', overflow: 'hidden', borderRadius: 16,
+          width: GUTTER, flexShrink: 0, minHeight: 0, position: 'relative', overflow: 'hidden', borderRadius: 16,
           background: 'rgba(255,255,255,0.015)', border: `1px solid ${T.line}`,
-          display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: 20,
+          display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '20px 8px',
         }}>
-          <span style={{ fontFamily: T.mono, fontSize: 8.5, letterSpacing: '0.16em', color: T.textMute, marginBottom: 12 }}>PUBLICITÉ</span>
-          <AdHalfPage13 />
+          <span style={{ fontFamily: T.mono, fontSize: 8.5, letterSpacing: '0.16em', color: T.textMute, marginBottom: 12, flexShrink: 0 }}>PUBLICITÉ</span>
+          <GutterAd />
         </div>
       </div>
     </div>
