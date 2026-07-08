@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import { createClient } from '@/lib/supabase/server'
 import AppShell from '@/components/shell/AppShell'
 import DuoFeed from '@/components/duo/DuoFeed'
-import PromoGutter13 from '@/components/promo/PromoGutter13'
+import PromoResponsive from '@/components/promo/PromoResponsive'
 
 // Page de QA uniquement — jamais indexée, non liée dans la nav.
 export const metadata: Metadata = {
@@ -17,9 +17,9 @@ function rankLabel(tier: string | null, division: string | null, lp: number | nu
   return high ? `${t} · ${lp ?? 0} LP` : `${t} ${division ?? ''} · ${lp ?? 0} LP`.trim()
 }
 
-type Props = { params: { locale: string }; searchParams: { variant?: string } }
+type Props = { params: { locale: string }; searchParams: { tier?: string } }
 
-export default async function PromoPreviewPage({ params: { locale } }: Props) {
+export default async function PromoPreviewPage({ params: { locale }, searchParams }: Props) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
@@ -64,5 +64,5 @@ export default async function PromoPreviewPage({ params: { locale } }: Props) {
     </AppShell>
   )
 
-  return <PromoGutter13 appSlot={appSlot} />
+  return <PromoResponsive appSlot={appSlot} forcedTier={searchParams.tier} />
 }
