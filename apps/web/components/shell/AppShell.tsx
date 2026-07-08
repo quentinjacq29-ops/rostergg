@@ -83,12 +83,14 @@ export default function AppShell({
   locale = 'fr',
   pendingCount = 0,
   unreadMsgCount = 0,
+  framed = false,
 }: {
   children: ReactNode
   user: ShellUser | null
   locale?: string
   pendingCount?: number
   unreadMsgCount?: number
+  framed?: boolean   // rendu « encadrable » (QA promo) : hauteur 100% au lieu de 100dvh
 }) {
   const pathname = usePathname()
   const activeId = pathname.includes('/me') ? 'me' : (NAV.find(n => pathname.includes(n.href))?.id ?? 'duo')
@@ -206,7 +208,7 @@ export default function AppShell({
     // DesktopShell : flex row, hauteur = viewport visible (dvh → pas de décalage
     // avec la barre d'URL mobile), overflow hidden
     <div style={{
-      width: '100%', height: '100dvh', display: 'flex', overflow: 'hidden',
+      width: '100%', height: framed ? '100%' : '100dvh', display: 'flex', overflow: 'hidden',
       background: T.bg, color: T.text, fontFamily: T.body,
       backgroundImage: `
         radial-gradient(1100px 600px at 18% -10%, ${T.violet}14, transparent 55%),
