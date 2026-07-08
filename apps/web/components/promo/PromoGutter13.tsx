@@ -137,13 +137,12 @@ export default function PromoGutter13({ appSlot }: { appSlot: ReactNode }) {
       <div style={{ flex: 1, minHeight: 0, display: 'flex', gap: GAP }}>
         {/* WELL — app scalée */}
         <PromoFrame>{appSlot}</PromoFrame>
-        {/* GOUTTIÈRE droite — boîte neutre, juste le placeholder 300×600 */}
+        {/* GOUTTIÈRE droite — pas d'encart : le placeholder 300×600 EST le seul cadre */}
         <div style={{
-          width: GUTTER, flexShrink: 0, minHeight: 0, position: 'relative', overflow: 'hidden', borderRadius: 16,
-          background: 'rgba(255,255,255,0.015)', border: `1px solid ${T.line}`,
-          display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '20px 8px',
+          width: GUTTER, flexShrink: 0, minHeight: 0,
+          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10,
         }}>
-          <span style={{ fontFamily: T.mono, fontSize: 8.5, letterSpacing: '0.16em', color: T.textMute, marginBottom: 12, flexShrink: 0 }}>PUBLICITÉ</span>
+          <span style={{ fontFamily: T.mono, fontSize: 8.5, letterSpacing: '0.16em', color: T.textMute, flexShrink: 0 }}>PUBLICITÉ</span>
           <GutterAd />
         </div>
       </div>
