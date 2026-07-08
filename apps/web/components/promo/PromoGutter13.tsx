@@ -7,7 +7,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 
 const T = {
-  line: 'rgba(255,255,255,0.06)',
+  line: 'rgba(255,255,255,0.06)', textMute: '#5a607a',
   display: 'var(--font-display)', body: 'var(--font-body)', mono: 'var(--font-mono)',
 }
 
@@ -17,7 +17,7 @@ const BILLB_H = 150
 const PAD = 16
 const GAP = 14
 
-const INK = '#0a0c14', O1 = '#ff8a3d', O2 = '#ff3d6e', GOLD = '#ffd166', PURP1 = '#c049ff', PURP2 = '#7c1fd1'
+const INK = '#0a0c14', O1 = '#ff8a3d', O2 = '#ff3d6e', GOLD = '#ffd166'
 const stripe = (a: string, b: string) => `repeating-linear-gradient(135deg, ${a} 0 8px, ${b} 8px 16px)`
 
 // URLs placeholder (annonceurs fictifs) — aucune vraie marque, aucun tracking
@@ -54,27 +54,19 @@ function AdBillboard13() {
   )
 }
 
-// ── Pavé 300×600 (ratio 1:2) — visuel seul ; le lien porte sur toute la gouttière
+// ── Pavé 300×600 — placeholder nu (toute la boîte = l'emplacement pub), cliquable
 function AdHalfPage13() {
   return (
-    <div style={{
-      position: 'relative', width: 300, height: 600, borderRadius: 16, overflow: 'hidden', flexShrink: 0,
-      background: `linear-gradient(165deg, #0d0526 0%, #2a0a4a 55%, #6b1f9e 130%)`,
-      boxShadow: '0 24px 60px -18px rgba(0,0,0,0.7), inset 0 0 0 1px rgba(255,255,255,0.08)', display: 'flex', flexDirection: 'column',
+    <a href={AD_URL_HALFPAGE} target="_blank" rel="noopener noreferrer sponsored" style={{
+      position: 'relative', width: 300, height: 600, borderRadius: 12, overflow: 'hidden', cursor: 'pointer', flexShrink: 0, textDecoration: 'none',
+      border: '1px dashed rgba(255,255,255,0.28)',
+      background: stripe('rgba(255,255,255,0.05)', 'rgba(255,255,255,0.015)'),
+      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10,
     }}>
-      <div style={{ padding: '16px 18px 0' }}>
-        <div style={{ fontFamily: T.mono, fontSize: 9.5, letterSpacing: '0.16em', color: '#d9b3ff' }}>NOW LIVE · S15</div>
-        <div style={{ fontFamily: T.display, fontSize: 30, color: '#fff', lineHeight: 1, marginTop: 6 }}>RIFT<span style={{ color: PURP1 }}>BORN</span></div>
-        <div style={{ fontFamily: T.body, fontSize: 12.5, color: 'rgba(255,255,255,0.66)', marginTop: 6 }}>La nouvelle ADC qui change la botlane.</div>
-      </div>
-      <div style={{ position: 'relative', flex: 1, margin: '16px 18px', borderRadius: 12, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.12)', background: stripe('rgba(255,255,255,0.07)', 'rgba(255,255,255,0.02)'), display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <span style={{ fontFamily: T.mono, fontSize: 10, color: 'rgba(255,255,255,0.5)', letterSpacing: '0.14em', transform: 'rotate(-90deg)', whiteSpace: 'nowrap' }}>[ VISUEL ANNONCEUR 300×600 ]</span>
-      </div>
-      <div style={{ padding: '0 18px 18px' }}>
-        <div style={{ width: '100%', padding: '13px', borderRadius: 10, textAlign: 'center', background: `linear-gradient(135deg, ${PURP1}, ${PURP2})`, color: '#fff', fontFamily: T.display, fontSize: 14, letterSpacing: '0.05em' }}>JOUER GRATUITEMENT</div>
-      </div>
-      <span style={{ position: 'absolute', top: 10, right: 10, fontFamily: T.mono, fontSize: 8, letterSpacing: '0.16em', color: 'rgba(255,255,255,0.55)' }}>300×600</span>
-    </div>
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.4)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" /><path d="M3 15l5-5 4 4 3-3 6 6" /><circle cx="8.5" cy="8.5" r="1.5" /></svg>
+      <span style={{ fontFamily: T.display, fontSize: 22, color: 'rgba(255,255,255,0.85)', letterSpacing: '0.08em' }}>300 × 600</span>
+      <span style={{ fontFamily: T.mono, fontSize: 10, color: 'rgba(255,255,255,0.42)', letterSpacing: '0.18em' }}>EMPLACEMENT PUB</span>
+    </a>
   )
 }
 
@@ -118,20 +110,15 @@ export default function PromoGutter13({ appSlot }: { appSlot: ReactNode }) {
       <div style={{ flex: 1, minHeight: 0, display: 'flex', gap: GAP }}>
         {/* WELL — app scalée */}
         <PromoFrame>{appSlot}</PromoFrame>
-        {/* GOUTTIÈRE droite (skin) + 300×600 */}
-        <a href={AD_URL_HALFPAGE} target="_blank" rel="noopener noreferrer sponsored" style={{
-          width: GUTTER, flexShrink: 0, position: 'relative', overflow: 'hidden', borderRadius: 16, cursor: 'pointer', textDecoration: 'none', display: 'block',
-          background: `linear-gradient(225deg, ${INK} 0%, #2a0f06 60%, ${O2}33 130%)`,
+        {/* GOUTTIÈRE droite — boîte neutre, juste le placeholder 300×600 */}
+        <div style={{
+          width: GUTTER, flexShrink: 0, position: 'relative', overflow: 'hidden', borderRadius: 16,
+          background: 'rgba(255,255,255,0.015)', border: `1px solid ${T.line}`,
+          display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: 20,
         }}>
-          <div style={{ position: 'absolute', top: 0, bottom: 0, left: 0, width: 8, background: stripe(O1, INK), opacity: 0.9 }} />
-          <div style={{ position: 'absolute', inset: 0, opacity: 0.07, display: 'flex', flexDirection: 'column', justifyContent: 'space-around', transform: 'rotate(-12deg) scale(1.4)', pointerEvents: 'none' }}>
-            {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} style={{ fontFamily: T.display, fontSize: 30, color: GOLD, whiteSpace: 'nowrap', letterSpacing: '0.1em', textAlign: 'center' }}>ASCEND · ENERGY</div>
-            ))}
-          </div>
-          <div style={{ position: 'absolute', top: 20, left: (GUTTER - 300) / 2, zIndex: 2 }}><AdHalfPage13 /></div>
-          <span style={{ position: 'absolute', bottom: 12, right: 12, fontFamily: T.mono, fontSize: 8, letterSpacing: '0.16em', color: 'rgba(255,255,255,0.55)', background: 'rgba(0,0,0,0.4)', padding: '3px 7px', borderRadius: 5 }}>PUBLICITÉ · HABILLAGE</span>
-        </a>
+          <span style={{ fontFamily: T.mono, fontSize: 8.5, letterSpacing: '0.16em', color: T.textMute, marginBottom: 12 }}>PUBLICITÉ</span>
+          <AdHalfPage13 />
+        </div>
       </div>
     </div>
   )
