@@ -12,7 +12,6 @@ const T = {
 }
 
 const APP_NATIVE = 1440
-const GUTTER = 340
 const BILLB_H = 150
 const PAD = 16
 const GAP = 14
@@ -70,28 +69,34 @@ function AdHalfPage13() {
   )
 }
 
-// ── Pavé gouttière : scale-to-fit (ratio 1:2 verrouillé) pour tenir sur 13" ────
-// Le 300×600 fait 600px de haut ; sur un écran court il ne rentre pas. On le met
-// à l'échelle pour qu'il tienne dans la hauteur dispo, en gardant son ratio exact.
-function GutterAd() {
+// ── Gouttière = pavé 300×600, ratio 1:2 verrouillé, scale-to-fit en hauteur.
+// La colonne épouse EXACTEMENT la largeur du pavé (aucun espace horizontal perdu) ;
+// tout l'espace récupéré revient au well (l'app). Sur écran court, le pavé est mis
+// à l'échelle et la gouttière rétrécit d'autant.
+function GutterSlot() {
   const ref = useRef<HTMLDivElement>(null)
   const [scale, setScale] = useState(1)
   useEffect(() => {
     const el = ref.current
     if (!el) return
     const compute = () => {
-      const s = Math.min(1, el.clientHeight / 600, el.clientWidth / 300)
-      setScale(s > 0 ? s : 1)
+      const availH = el.clientHeight - 26 // − label « PUBLICITÉ » + gap
+      setScale(Math.max(0.15, Math.min(1, availH / 600)))
     }
     compute()
     const ro = new ResizeObserver(compute)
     ro.observe(el)
     return () => ro.disconnect()
   }, [])
+  const w = Math.round(300 * scale)
+  const h = Math.round(600 * scale)
   return (
-    <div ref={ref} style={{ flex: 1, minHeight: 0, width: '100%', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', overflow: 'hidden' }}>
-      <div style={{ transform: `scale(${scale})`, transformOrigin: 'top center', flexShrink: 0 }}>
-        <AdHalfPage13 />
+    <div ref={ref} style={{ flexShrink: 0, minHeight: 0, width: w, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+      <span style={{ fontFamily: T.mono, fontSize: 8.5, letterSpacing: '0.16em', color: T.textMute, flexShrink: 0 }}>PUBLICITÉ</span>
+      <div style={{ width: w, height: h, overflow: 'hidden', flexShrink: 0 }}>
+        <div style={{ transform: `scale(${scale})`, transformOrigin: 'top left' }}>
+          <AdHalfPage13 />
+        </div>
       </div>
     </div>
   )
@@ -137,14 +142,8 @@ export default function PromoGutter13({ appSlot }: { appSlot: ReactNode }) {
       <div style={{ flex: 1, minHeight: 0, display: 'flex', gap: GAP }}>
         {/* WELL — app scalée */}
         <PromoFrame>{appSlot}</PromoFrame>
-        {/* GOUTTIÈRE droite — pas d'encart : le placeholder 300×600 EST le seul cadre */}
-        <div style={{
-          width: GUTTER, flexShrink: 0, minHeight: 0,
-          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10,
-        }}>
-          <span style={{ fontFamily: T.mono, fontSize: 8.5, letterSpacing: '0.16em', color: T.textMute, flexShrink: 0 }}>PUBLICITÉ</span>
-          <GutterAd />
-        </div>
+        {/* GOUTTIÈRE droite — colonne qui épouse la largeur du pavé, zéro vide */}
+        <GutterSlot />
       </div>
     </div>
   )
