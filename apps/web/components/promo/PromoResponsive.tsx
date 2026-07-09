@@ -109,6 +109,72 @@ function TierFrame({ W, H, gutters, skin, appSlot }: { W: number; H: number; gut
   )
 }
 
+// ── Habillage grand écran (takeover) — port de promo-habillage.jsx ────────────
+const HB_TOP = 130, HB_PAD = 22, HB_O1 = '#ff8a3d', HB_O2 = '#ff3d6e', HB_GOLD = '#ffd166', HB_INK = '#0a0c14'
+const hbStripe = (a: string, b: string) => `repeating-linear-gradient(135deg, ${a} 0 10px, ${b} 10px 20px)`
+
+function HbSafe() {
+  return (
+    <div style={{ width: 300, height: 600, borderRadius: 10, border: '1px dashed rgba(255,255,255,0.4)', background: 'rgba(10,12,20,0.55)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+      <AdIcon s={24} />
+      <span style={{ fontFamily: T.display, fontSize: 20, color: 'rgba(255,255,255,0.9)', letterSpacing: '0.06em' }}>300 × 600</span>
+      <span style={{ fontFamily: T.mono, fontSize: 9.5, color: 'rgba(255,255,255,0.5)', letterSpacing: '0.16em' }}>ZONE SÛRE · CLIC</span>
+    </div>
+  )
+}
+
+function HbWall({ side, wallW }: { side: 'left' | 'right'; wallW: number }) {
+  const isLeft = side === 'left'
+  return (
+    <div style={{ position: 'absolute', top: HB_TOP, bottom: 0, [isLeft ? 'left' : 'right']: 0, width: wallW, overflow: 'hidden', display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: 44 }}>
+      <div style={{ position: 'absolute', top: 0, bottom: 0, [isLeft ? 'right' : 'left']: 0, width: 10, background: hbStripe(HB_O1, HB_INK), opacity: 0.8 }} />
+      <div style={{ position: 'absolute', inset: 0, opacity: 0.06, display: 'flex', flexDirection: 'column', justifyContent: 'space-around', transform: 'rotate(-14deg) scale(1.5)', pointerEvents: 'none' }}>
+        {Array.from({ length: 9 }).map((_, i) => <div key={i} style={{ fontFamily: T.display, fontSize: 40, color: HB_GOLD, whiteSpace: 'nowrap', textAlign: 'center', letterSpacing: '0.1em' }}>MARQUE · ANNONCEUR</div>)}
+      </div>
+      <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14, marginBottom: 34 }}>
+        <div style={{ width: 58, height: 58, borderRadius: 15, background: `linear-gradient(135deg, ${HB_O1}, ${HB_O2})`, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 0 26px ${HB_O1}aa` }}>
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke={HB_INK} strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M13 2L4 14h6l-1 8 9-12h-6z" /></svg>
+        </div>
+        <span style={{ fontFamily: T.mono, fontSize: 10, color: 'rgba(255,255,255,0.55)', letterSpacing: '0.18em' }}>MUR {isLeft ? 'GAUCHE' : 'DROIT'} · SKIN</span>
+      </div>
+      <HbSafe />
+    </div>
+  )
+}
+
+function HabillageFrame({ W, H, appSlot }: { W: number; H: number; appSlot: ReactNode }) {
+  const wallW = (W - APP_NATIVE) / 2 - HB_PAD
+  return (
+    <div style={{ position: 'relative', width: W, height: H, overflow: 'hidden', fontFamily: T.body, background: `radial-gradient(1400px 800px at 50% -10%, ${HB_O2}2e, transparent 60%), radial-gradient(1000px 700px at 0% 120%, ${HB_O1}22, transparent 55%), linear-gradient(180deg, #120a08 0%, #0a0b12 55%)` }}>
+      {/* Surface skin cliquable (bandeau + murs) — l'app est posée par-dessus, hors du lien */}
+      <a href="https://example.com/?ad=habillage" target="_blank" rel="noopener noreferrer sponsored" style={{ position: 'absolute', inset: 0, zIndex: 1, textDecoration: 'none', display: 'block' }}>
+        <div style={{ position: 'absolute', inset: 0, opacity: 0.05, background: hbStripe('rgba(255,255,255,0.5)', 'transparent'), pointerEvents: 'none' }} />
+        {/* Bandeau haut */}
+        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: HB_TOP, display: 'flex', alignItems: 'center', gap: 26, padding: `0 ${HB_PAD + 20}px`, boxSizing: 'border-box', borderBottom: `1px solid ${HB_O1}44`, background: `linear-gradient(100deg, ${HB_INK} 0%, #2a1206 44%, ${HB_O2}44 130%)` }}>
+          <div style={{ width: 66, height: 66, borderRadius: 16, flexShrink: 0, background: `linear-gradient(135deg, ${HB_O1}, ${HB_O2})`, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 0 26px ${HB_O1}aa` }}>
+            <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke={HB_INK} strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M13 2L4 14h6l-1 8 9-12h-6z" /></svg>
+          </div>
+          <div>
+            <div style={{ fontFamily: T.mono, fontSize: 11, letterSpacing: '0.24em', color: HB_GOLD, opacity: 0.9 }}>HABILLAGE · BANDEAU HAUT</div>
+            <div style={{ fontFamily: T.display, fontSize: 40, color: '#fff', lineHeight: 1.02, marginTop: 4 }}>VISUEL <span style={{ color: HB_GOLD }}>ANNONCEUR</span></div>
+          </div>
+          <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 18 }}>
+            <span style={{ fontFamily: T.mono, fontSize: 11, color: 'rgba(255,255,255,0.42)', letterSpacing: '0.14em' }}>ZONE HAUTE PLEINE LARGEUR</span>
+            <div style={{ padding: '15px 24px', borderRadius: 12, background: `linear-gradient(135deg, ${HB_O1}, ${HB_O2})`, color: HB_INK, fontFamily: T.display, fontSize: 17, letterSpacing: '0.04em' }}>EN SAVOIR PLUS →</div>
+          </div>
+          <span style={{ position: 'absolute', top: 9, left: 16, fontFamily: T.mono, fontSize: 8.5, letterSpacing: '0.16em', color: 'rgba(255,255,255,0.55)' }}>PUBLICITÉ · HABILLAGE (SKIN)</span>
+        </div>
+        <HbWall side="left" wallW={wallW} />
+        <HbWall side="right" wallW={wallW} />
+      </a>
+      {/* WELL — l'app posée au centre (par-dessus le skin, hors du lien) */}
+      <div style={{ position: 'absolute', top: HB_TOP + HB_PAD, left: '50%', transform: 'translateX(-50%)', width: APP_NATIVE, height: H - HB_TOP - HB_PAD * 2, zIndex: 2, borderRadius: 18, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 40px 120px -30px rgba(0,0,0,0.9)' }}>
+        {appSlot}
+      </div>
+    </div>
+  )
+}
+
 export default function PromoResponsive({ appSlot, forcedTier }: { appSlot: ReactNode; forcedTier?: string }) {
   const [win, setWin] = useState<{ w: number; h: number } | null>(null)
   useEffect(() => {
@@ -124,16 +190,19 @@ export default function PromoResponsive({ appSlot, forcedTier }: { appSlot: Reac
   const t = forcedTier && TIERS[forcedTier] ? TIERS[forcedTier] : null
   if (t) {
     const fit = Math.min(1, win.w / t.W, win.h / t.H)
+    // Le palier 34 (ultrawide) = habillage takeover complet (murs symétriques + bandeau)
+    const frame = t.skin
+      ? <HabillageFrame W={t.W} H={t.H} appSlot={appSlot} />
+      : <TierFrame W={t.W} H={t.H} gutters={t.gutters} skin={false} appSlot={appSlot} />
     return (
       <div style={{ width: '100vw', height: '100dvh', overflow: 'hidden', background: '#04050a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ transform: `scale(${fit})`, transformOrigin: 'center', flexShrink: 0 }}>
-          <TierFrame W={t.W} H={t.H} gutters={t.gutters} skin={t.skin} appSlot={appSlot} />
-        </div>
+        <div style={{ transform: `scale(${fit})`, transformOrigin: 'center', flexShrink: 0 }}>{frame}</div>
       </div>
     )
   }
 
   // Responsive live : inventaire selon la largeur réelle, l'app remplit la fenêtre
   const inv = invForWidth(win.w)
-  return <TierFrame W={win.w} H={win.h} gutters={inv.gutters} skin={inv.skin} appSlot={appSlot} />
+  if (inv.skin) return <HabillageFrame W={win.w} H={win.h} appSlot={appSlot} />
+  return <TierFrame W={win.w} H={win.h} gutters={inv.gutters} skin={false} appSlot={appSlot} />
 }
