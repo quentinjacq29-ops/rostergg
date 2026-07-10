@@ -194,7 +194,7 @@ export default function SettingsClient({
         <div className="rgg-set-grid">
           {/* ── COLONNE GAUCHE : identité compte (sticky desktop) ── */}
           <div className="rgg-set-side">
-            <div style={{ borderRadius: 18, padding: 22, background: `linear-gradient(160deg, ${T.surface}, ${T.void})`, border: `1px solid ${T.line}` }}>
+            <div style={{ width: '100%', boxSizing: 'border-box', borderRadius: 18, padding: 22, background: `linear-gradient(160deg, ${T.surface}, ${T.void})`, border: `1px solid ${T.line}` }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
                 <span style={{ width: 56, height: 56, borderRadius: '50%', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg,#2a3350,#121626)', boxShadow: `0 0 0 2px ${T.diamond}`, fontFamily: T.display, fontSize: 20, color: T.text }}>{initials}</span>
                 <div style={{ minWidth: 0 }}>

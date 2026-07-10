@@ -88,7 +88,8 @@ function nameHue(s: string) {
   let h = 0; for (const c of s) h = (h * 31 + c.charCodeAt(0)) % 360; return h
 }
 function playerName(p: CandidateProfile | null) {
-  return p?.riot_accounts?.game_name ?? p?.display_name ?? '—'
+  // Pseudo public d'abord (le Riot ID reste masqué jusqu'à l'acceptation d'un duo)
+  return p?.display_name ?? p?.riot_accounts?.game_name ?? '—'
 }
 function playerInitials(p: CandidateProfile | null) {
   return playerName(p).slice(0, 2).toUpperCase()
@@ -1213,7 +1214,7 @@ export default function DuoFeed({
         const mp   = (data as any).matching_prefs
         const solo = (ra?.ranks ?? []).find((r: any) => r.queue === 'RANKED_SOLO_5x5') ?? null
         setMyProfile({
-          name:  ra?.game_name ?? (data as any).display_name ?? 'MOI',
+          name:  (data as any).display_name ?? ra?.game_name ?? 'MOI',
           role:  mp?.main_roles?.[0]          ?? null,
           rank:  solo?.tier?.toLowerCase()    ?? null,
           tier:  solo?.division               ?? null,
