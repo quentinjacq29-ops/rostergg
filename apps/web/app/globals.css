@@ -292,6 +292,16 @@
   .rgg-me-grid        { grid-template-columns: 1fr; gap: 0; max-width: 430px; }
   .rgg-me-preview     { position: static; }
 }
+/* Réglages /settings : desktop 2 colonnes (carte compte sticky | groupes) ⇆ mobile empilé */
+.rgg-set-topbar { display: none; }
+.rgg-set-grid   { display: grid; grid-template-columns: 340px 1fr; gap: 34px; max-width: 1120px; margin: 0 auto; padding: 30px 40px 60px; align-items: start; }
+.rgg-set-side   { position: sticky; top: 30px; display: flex; flex-direction: column; gap: 16px; }
+@media (max-width: 859px) {
+  .rgg-set-topbar { display: flex; }
+  .rgg-set-grid   { grid-template-columns: 1fr; gap: 0; max-width: 460px; padding: 16px 16px 40px; }
+  .rgg-set-side   { position: static; margin-bottom: 24px; }
+}
+
 /* Heatmap éditable : colonnes (desktop) ⇆ matrice tap-to-paint (mobile) */
 .rgg-heat-mobile { display: none; }
 @media (max-width: 859px) {
