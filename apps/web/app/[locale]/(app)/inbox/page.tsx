@@ -116,13 +116,12 @@ export default async function InboxPage() {
 
   const { data: myProfile } = await supabase
     .from('profiles')
-    .select('display_name, show_online_status')
+    .select('display_name')
     .eq('id', user.id)
     .single()
 
   const currentUserRole = myPrefs?.main_roles?.[0] ?? null
   const currentUserName = myProfile?.display_name ?? myRiot?.game_name ?? 'Moi'
-  const showOnline = myProfile?.show_online_status ?? true
 
   // ── Helpers ──────────────────────────────────────────────────────────
 
@@ -193,7 +192,6 @@ export default async function InboxPage() {
       pendingRequests={pendingRequests}
       sentRequests={sentRequests}
       conversations={conversations}
-      showOnline={showOnline}
     />
   )
 }

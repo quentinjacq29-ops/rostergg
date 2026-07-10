@@ -14,20 +14,37 @@ export const RANK_COLORS: Record<string, string> = {
   challenger:  '#ebd990',
 }
 
+// Pastille de statut (façon Messenger) : 🟢 en ligne · 🔴 hors ligne · 🟡 en game.
+// « ingame » viendra quand on aura l'info de l'API Riot ; pour l'instant les
+// appelants passent le booléen `online` → en ligne / hors ligne.
+export type PresenceStatus = 'online' | 'offline' | 'ingame'
+const STATUS_COLOR: Record<PresenceStatus, string> = {
+  online:  '#00ff9d',
+  offline: '#e0555f',
+  ingame:  '#ffd166',
+}
+
 export default function Avatar({
   initials = 'AZ',
   size = 44,
   rank = 'iron',
   hue = 220,
   online = true,
+  status,
+  showStatus = true,
 }: {
   initials?: string
   size?: number
   rank?: string        // lowercase tier key
   hue?: number
   online?: boolean
+  status?: PresenceStatus   // prioritaire sur `online` (pour le futur « ingame »)
+  showStatus?: boolean      // false → pas de pastille (ex. aperçu statique)
 }) {
   const rankColor = RANK_COLORS[rank] ?? '#9aa2bf'
+  const st: PresenceStatus = status ?? (online ? 'online' : 'offline')
+  const dot = STATUS_COLOR[st]
+  const glow = st !== 'offline'   // pas de halo pour hors ligne (feed moins bruyant)
 
   return (
     <div style={{ position: 'relative', width: size, height: size, flexShrink: 0 }}>
@@ -42,13 +59,13 @@ export default function Avatar({
       }}>
         {initials}
       </div>
-      {online && (
+      {showStatus && (
         <div style={{
           position: 'absolute', bottom: -1, right: -1,
           width: size * 0.28, height: size * 0.28,
           borderRadius: '50%',
-          background: '#00ff9d',
-          boxShadow: '0 0 0 2px #0a0c14, 0 0 8px #00ff9d',
+          background: dot,
+          boxShadow: glow ? `0 0 0 2px #0a0c14, 0 0 8px ${dot}` : `0 0 0 2px #0a0c14`,
         }} />
       )}
     </div>

@@ -12,12 +12,12 @@ export default async function DuoPage() {
   const { data: { user } } = await supabase.auth.getUser()
 
   let initialPrefs = null
-  let showOnline = true
   if (user) {
-    const [{ data }, { data: prof }] = await Promise.all([
-      supabase.from('matching_prefs').select('looking_for_roles, rank_floor, regions').eq('profile_id', user.id).maybeSingle(),
-      supabase.from('profiles').select('show_online_status').eq('id', user.id).maybeSingle(),
-    ])
+    const { data } = await supabase
+      .from('matching_prefs')
+      .select('looking_for_roles, rank_floor, regions')
+      .eq('profile_id', user.id)
+      .maybeSingle()
     if (data) {
       initialPrefs = {
         looking_for_roles: data.looking_for_roles ?? [],
@@ -25,14 +25,12 @@ export default async function DuoPage() {
         region: data.regions?.[0] ?? null,
       }
     }
-    showOnline = prof?.show_online_status ?? true
   }
 
   return (
     <DuoFeed
       userId={user?.id ?? null}
       initialPrefs={initialPrefs}
-      showOnline={showOnline}
     />
   )
 }

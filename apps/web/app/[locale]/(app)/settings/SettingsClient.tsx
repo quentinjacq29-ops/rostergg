@@ -36,7 +36,6 @@ type Props = {
   email: string
   initialDisplayName: string
   initialDiscoverable: boolean
-  initialShowOnline: boolean
   initialRequestPolicy: string
   initialNotifPrefs: Record<string, Record<string, boolean>>
   riotAccount: { game_name: string; tag_line: string; platform: string; rankLabel: string | null } | null
@@ -137,7 +136,7 @@ function ConfirmModal({ title, riotId, lines, note, cancelLabel, confirmLabel, c
 }
 
 export default function SettingsClient({
-  locale, email, initialDisplayName, initialDiscoverable, initialShowOnline,
+  locale, email, initialDisplayName, initialDiscoverable,
   initialRequestPolicy, initialNotifPrefs, riotAccount, blocks: initialBlocks,
 }: Props) {
   const router = useRouter()
@@ -146,8 +145,7 @@ export default function SettingsClient({
   const [editingName, setEditingName] = useState(false)
   const [nameErr, setNameErr] = useState<string | null>(null)
   const [discoverable, setDiscoverable] = useState(initialDiscoverable)
-  const [showOnline, setShowOnline] = useState(initialShowOnline)
-  const [requestPolicy] = useState(initialRequestPolicy in REQUEST_POLICY ? initialRequestPolicy : 'elo_range')
+  const [requestPolicy] = useState(initialRequestPolicy in REQUEST_POLICY ? initialRequestPolicy : 'all')
   const [notifPrefs, setNotifPrefs] = useState(initialNotifPrefs)
   const [blocks, setBlocks] = useState(initialBlocks)
   const [modal, setModal] = useState<null | 'unlink' | 'delete'>(null)
@@ -237,8 +235,7 @@ export default function SettingsClient({
             </SGroup>
 
             <SGroup label="VISIBILITÉ DU PROFIL">
-              <SRow title="Profil visible dans le feed Duo" toggle on={discoverable} onToggle={() => { const v = !discoverable; setDiscoverable(v); savePrivacy({ profileDiscoverable: v }) }} />
-              <SRow title="Afficher mon statut en ligne" toggle on={showOnline} onToggle={() => { const v = !showOnline; setShowOnline(v); savePrivacy({ showOnlineStatus: v }) }} last />
+              <SRow title="Profil visible dans le feed Duo" sub="Si désactivé, tu n'apparais plus dans les recherches de duo." toggle on={discoverable} onToggle={() => { const v = !discoverable; setDiscoverable(v); savePrivacy({ profileDiscoverable: v }) }} last />
             </SGroup>
 
             <SGroup label="NOTIFICATIONS" note="« Push nav. » = notifications du navigateur (l'activation demandera l'autorisation de ton navigateur).">

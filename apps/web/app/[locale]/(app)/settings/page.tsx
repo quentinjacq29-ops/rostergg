@@ -32,7 +32,6 @@ export default async function SettingsPage({ params }: { params: { locale: strin
       email={user.email ?? ''}
       initialDisplayName={profile?.display_name ?? (ra as any)?.game_name ?? ''}
       initialDiscoverable={profile?.profile_discoverable ?? true}
-      initialShowOnline={profile?.show_online_status ?? true}
       initialRequestPolicy={policy}
       initialNotifPrefs={(profile?.notification_prefs as Record<string, Record<string, boolean>> | null) ?? {}}
       riotAccount={ra ? { game_name: (ra as any).game_name, tag_line: (ra as any).tag_line, platform: (ra as any).platform, rankLabel: rankLabel(solo?.tier, solo?.division) } : null}

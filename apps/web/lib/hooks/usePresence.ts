@@ -4,9 +4,7 @@ import { createClient } from '@/lib/supabase/client'
 
 type PresenceState = { user_id: string; online_at: string }
 
-// broadcast=false → on lit la présence des autres mais on ne se diffuse PAS
-// (respecte le réglage « Afficher mon statut en ligne »).
-export function usePresence(userId: string | null, broadcast = true) {
+export function usePresence(userId: string | null) {
   const [onlineIds,   setOnlineIds]   = useState<Set<string>>(new Set())
   const [onlineCount, setOnlineCount] = useState(0)
   // Ref pour éviter les doubles abonnements (React StrictMode)
@@ -40,7 +38,7 @@ export function usePresence(userId: string | null, broadcast = true) {
       .on('presence', { event: 'join'  }, syncState)
       .on('presence', { event: 'leave' }, syncState)
       .subscribe(async status => {
-        if (status === 'SUBSCRIBED' && broadcast) {
+        if (status === 'SUBSCRIBED') {
           await channel.track({ user_id: userId, online_at: new Date().toISOString() })
         }
       })
@@ -50,7 +48,7 @@ export function usePresence(userId: string | null, broadcast = true) {
       supabase.removeChannel(channel)
       channelRef.current = null
     }
-  }, [userId, broadcast])
+  }, [userId])
 
   return { onlineIds, onlineCount }
 }
