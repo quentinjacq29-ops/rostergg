@@ -434,6 +434,7 @@ export default function InboxClient({
   pendingRequests: initialPending,
   sentRequests: initialSent,
   conversations: initialConversations,
+  showOnline = true,
 }: {
   userId: string
   currentUserRole: string | null
@@ -441,11 +442,12 @@ export default function InboxClient({
   pendingRequests: PendingRequest[]
   sentRequests: PendingRequest[]
   conversations: Conversation[]
+  showOnline?: boolean
 }) {
   const supabase = createClient()
   const router   = useRouter()
   const params   = useSearchParams()
-  const { onlineIds } = usePresence(userId)
+  const { onlineIds } = usePresence(userId, showOnline)
 
   const [pending,       setPending]       = useState(initialPending)
   const [conversations, setConversations] = useState(initialConversations)

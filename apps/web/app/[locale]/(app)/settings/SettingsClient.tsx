@@ -248,7 +248,6 @@ export default function SettingsClient({
             </SGroup>
 
             <SGroup label="CONFIDENTIALITÉ">
-              <SRow title="Qui peut voir mon profil" value={discoverable ? 'Tout le monde' : 'Personne (en pause)'} />
               <SRow title="Qui peut m'envoyer une demande" value={REQUEST_POLICY[requestPolicy]?.label} sub={REQUEST_POLICY[requestPolicy]?.sub} />
               <SRow title="Exporter mes données" sub="Télécharge une copie de tes données (RGPD)" action="Exporter" onAction={() => { window.location.href = '/api/me/export' }} />
               <SRow title="Supprimer mon compte" sub="Action définitive et irréversible" danger action="Supprimer" actionColor={T.danger} onAction={() => setModal('delete')} last />

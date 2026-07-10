@@ -1060,13 +1060,15 @@ function DuoFeedMobile(props: MobileProps) {
 export default function DuoFeed({
   userId,
   initialPrefs,
+  showOnline = true,
 }: {
   userId: string | null
   initialPrefs: { looking_for_roles: string[]; rank_floor: string | null; region: string | null } | null
+  showOnline?: boolean
 }) {
   const supabase = createClient()
   const router   = useRouter()
-  const { onlineIds, onlineCount } = usePresence(userId)
+  const { onlineIds, onlineCount } = usePresence(userId, showOnline)
 
   const [filters, setFilters] = useState<Filters>({
     role: initialPrefs?.looking_for_roles?.length ? initialPrefs.looking_for_roles : null,
